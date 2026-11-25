@@ -22,6 +22,9 @@
   --bad: #991b1b;
   --bad-bg: #fdecec;
   --focus: #2563eb;
+  --letter: #5b21b6;
+  --letter-bg: #f4f0ff;
+  --letter-border: #a78bfa;
   --you: #0f766e;
   --you-bg: #e3f4f1;
   --spouse: #9a4d0b;
@@ -56,6 +59,12 @@
     --bad: #fca5a5;
     --bad-bg: #3d1111;
     --focus: #93c5fd;
+  --letter: #d8ccff;
+  --letter-bg: #221a3a;
+  --letter-border: #8b6fe0;
+    --letter: #d8ccff;
+    --letter-bg: #221a3a;
+    --letter-border: #8b6fe0;
     --you: #5eead4;
     --you-bg: #0f2f2c;
     --spouse: #fcc472;
@@ -339,3 +348,16 @@ ol.steps ul li { margin-bottom: 6px; }
 /* A setting made once elsewhere, shown read-only. */
 .setting-line { margin: 4px 0 2px; }
 .setting-line .link-button { padding: 4px 0; min-height: 24px; }
+
+/* Figures copied from the RSA estimate letter: exact inputs, set apart from estimates. */
+details.letter-panel { background: var(--letter-bg); border: 2px solid var(--letter-border); border-left-width: 6px; padding: 12px 16px; margin-top: 14px; }
+details.letter-panel summary { gap: 10px; flex-wrap: wrap; color: var(--letter); font-size: 1rem; }
+details.letter-panel .letter-icon { flex: 0 0 auto; }
+details.letter-panel .letter-title { flex: 1 1 auto; }
+.letter-status {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--letter-border); color: var(--letter); background: var(--surface);
+}
+.letter-status.on { background: var(--letter); color: var(--letter-bg); border-color: var(--letter); }
+details.letter-panel > p { color: var(--text); }
+details.letter-panel input { border-color: var(--letter-border); }
