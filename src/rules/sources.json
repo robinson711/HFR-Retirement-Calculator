@@ -1,0 +1,95 @@
+{
+  "version": "2026-11-25",
+  "sources": {
+    "ers-handbook": {
+      "title": "ERS Member Handbook (Tier 1 and Tier 2)",
+      "publisher": "Retirement Systems of Alabama",
+      "url": "https://www.rsa-al.gov/uploads/files/ERS_Member_Handbook.pdf",
+      "asOf": "2026-11-25",
+      "note": "Copy supplied by the user; mentions changes effective October 1, 2024 and June 1, 2024."
+    },
+    "ers-t2-handbook-2019": {
+      "title": "ERS Tier 2 Member Handbook (2019)",
+      "publisher": "Retirement Systems of Alabama",
+      "url": "https://www.rsa-al.gov/uploads/files/ERS_Member_Handbook_T2_bookmarked.pdf",
+      "asOf": "2019-01-01"
+    },
+    "act-2022-348": {
+      "title": "Act 2022-348: Election to Provide Tier I Benefits to Tier II Plan Members",
+      "publisher": "Retirement Systems of Alabama",
+      "url": "https://www.rsa-al.gov/employers/ers/act-2022-348/",
+      "asOf": "2026-11-25"
+    },
+    "huntsville-personnel-manual": {
+      "title": "City of Huntsville Personnel Policies and Procedures Manual, updated September 2026",
+      "publisher": "City of Huntsville",
+      "url": "https://www.huntsvilleal.gov/government/jobs/benefits-compensation/",
+      "asOf": "2026-09-01",
+      "note": "Copy supplied by the user."
+    },
+    "huntsville-salary-schedule": {
+      "title": "Public Safety Salary Schedule, effective November 23, 2026",
+      "publisher": "City of Huntsville",
+      "url": "https://www.huntsvilleal.gov/government/jobs/benefits-compensation/",
+      "asOf": "2026-11-23",
+      "note": "Copy supplied by the user. Does not include the 2% COLA granted in 2026 (per user)."
+    },
+    "irs-2026": {
+      "title": "IRS releases tax inflation adjustments for tax year 2026 (IR-2025-103)",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026-including-amendments-from-the-one-big-beautiful-bill",
+      "asOf": "2025-10-09",
+      "note": "Figures from Rev. Proc. 2025-32 (https://www.irs.gov/pub/irs-drop/rp-25-32.pdf)."
+    },
+    "al-exempt-income": {
+      "title": "Income Exempt from Alabama Income Taxation",
+      "publisher": "Alabama Department of Revenue",
+      "url": "https://www.revenue.alabama.gov/individual-corporate/income-exempt-from-alabama-income-taxation/",
+      "asOf": "2026-03-27"
+    },
+    "user": {
+      "title": "Confirmed by the user (Huntsville Fire and Rescue member)",
+      "publisher": "User",
+      "url": "",
+      "asOf": "2026-11-25"
+    },
+    "irs-senior-deduction": {
+      "title": "Check your eligibility for the new enhanced deduction for seniors",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/newsroom/check-your-eligibility-for-the-new-enhanced-deduction-for-seniors",
+      "asOf": "2026-02-27"
+    },
+    "irs-pub-915": {
+      "title": "Publication 915, Social Security and Equivalent Railroad Retirement Benefits",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/publications/p915",
+      "asOf": "2026-11-25",
+      "note": "Not yet read directly; thresholds are set in statute (IRC 86)."
+    },
+    "irs-457b": {
+      "title": "IRC 457(b) Deferred Compensation Plans",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/retirement-plans/irc-457b-deferred-compensation-plans",
+      "asOf": "2026-11-25",
+      "note": "Not yet read directly."
+    },
+    "al-rates": {
+      "title": "What is Alabama's individual income tax rate?",
+      "publisher": "Alabama Department of Revenue",
+      "url": "https://www.revenue.alabama.gov/faqs/what-is-alabamas-individual-income-tax-rate/",
+      "asOf": "2022-08-05"
+    },
+    "al-form40-2024": {
+      "title": "Form 40 Booklet, tax year 2024",
+      "publisher": "Alabama Department of Revenue",
+      "url": "https://revenue.alabama.gov/wp-content/uploads/2025/01/24f40bk.pdf",
+      "asOf": "2025-01-01"
+    },
+    "al-schedule-rs": {
+      "title": "Schedule RS (2025) and Act 2022-294 retiree tax exemption",
+      "publisher": "Alabama Department of Revenue / Alabama Legislature",
+      "url": "https://www.revenue.alabama.gov/wp-content/uploads/2026/01/25schrsblk.pdf",
+      "asOf": "2026-01-01"
+    }
+  }
+}

@@ -1,0 +1,268 @@
+{
+  "id": "rsa-ers",
+  "version": "2026-11-25",
+  "rules": {
+    "tier1.benefitFactor": {
+      "label": "Tier 1 benefit factor",
+      "value": 0.020125,
+      "unit": "fraction of average final salary per year of service",
+      "source": "ers-handbook",
+      "citation": "Calculating Your Retirement Benefit, Tier 1, p.24",
+      "status": "verified"
+    },
+    "tier1.afsYears": {
+      "label": "Tier 1 average final salary: highest years averaged",
+      "value": 3,
+      "unit": "fiscal years (Oct-Sep), highest of the last 10",
+      "source": "ers-handbook",
+      "citation": "Calculating Your Retirement Benefit, Tier 1, p.24",
+      "status": "verified"
+    },
+    "tier1.earnableCap": {
+      "label": "Tier 1 earnable compensation cap",
+      "value": 1.2,
+      "unit": "multiple of base pay",
+      "source": "ers-handbook",
+      "citation": "Member Contributions, p.8",
+      "status": "verified"
+    },
+    "tier1.serviceAnyAge": {
+      "label": "Tier 1 service retirement at any age",
+      "value": 25,
+      "unit": "years of creditable service",
+      "source": "ers-handbook",
+      "citation": "Service Retirement, p.18, Tier 1 (30 years where the employer never adopted 25-year retirement; Huntsville has, per user)",
+      "status": "verified"
+    },
+    "tier1.ageWithTen": {
+      "label": "Tier 1 service retirement age with 10 years",
+      "value": 60,
+      "unit": "age",
+      "source": "ers-handbook",
+      "citation": "Service Retirement, p.18, Tier 1",
+      "status": "verified"
+    },
+    "tier1.contributionFLC": {
+      "label": "Tier 1 (and converted Tier 2) firefighter contribution rate",
+      "value": 0.085,
+      "unit": "fraction of earnable compensation",
+      "source": "act-2022-348",
+      "citation": "Act 2022-348 page: Tier II members pay 8.5% for firefighters",
+      "status": "verified"
+    },
+    "tier2.benefitFactor": {
+      "label": "Tier 2 benefit factor",
+      "value": 0.0165,
+      "unit": "fraction of average final salary per year of service",
+      "source": "ers-handbook",
+      "citation": "Calculating Your Retirement Benefit, Tier 2, p.25",
+      "status": "verified"
+    },
+    "tier2.afsYears": {
+      "label": "Tier 2 average final salary: highest years averaged",
+      "value": 5,
+      "unit": "fiscal years (Oct-Sep), highest of the last 10",
+      "source": "ers-handbook",
+      "citation": "Calculating Your Retirement Benefit, Tier 2, p.25",
+      "status": "verified"
+    },
+    "tier2.benefitCap": {
+      "label": "Tier 2 benefit cap",
+      "value": 0.8,
+      "unit": "fraction of average final salary",
+      "source": "ers-handbook",
+      "citation": "Calculating Your Retirement Benefit, Tier 2, p.25",
+      "status": "verified"
+    },
+    "tier2.earnableCap": {
+      "label": "Tier 2 earnable compensation cap",
+      "value": 1.25,
+      "unit": "multiple of base pay",
+      "source": "ers-handbook",
+      "citation": "Member Contributions, p.8",
+      "status": "verified"
+    },
+    "tier2.ageFLC": {
+      "label": "Tier 2 firefighter service retirement age with 10 years",
+      "value": 56,
+      "unit": "age",
+      "source": "ers-handbook",
+      "citation": "Service Retirement, p.18, Tier 2 (age 56 for FLC)",
+      "status": "verified"
+    },
+    "tier2.serviceReduced": {
+      "label": "Tier 2 retirement with 30 years before age 56 (firefighters)",
+      "value": {
+        "years": 30,
+        "reductionPerYear": 0.02
+      },
+      "unit": "30 years of service, benefit reduced 2% for each year under age 56",
+      "source": "ers-handbook",
+      "citation": "Service Retirement, p.18, Tier 2",
+      "status": "verified"
+    },
+    "tier2.contributionFLC": {
+      "label": "Tier 2 firefighter contribution rate",
+      "value": 0.07,
+      "unit": "fraction of earnable compensation",
+      "source": "ers-handbook",
+      "citation": "Member Contributions, p.8",
+      "status": "verified"
+    },
+    "minServiceYears": {
+      "label": "Vesting: minimum creditable service",
+      "value": 10,
+      "unit": "years",
+      "source": "ers-handbook",
+      "citation": "Vesting, p.9",
+      "status": "verified"
+    },
+    "stress.yearsPerBonusYear": {
+      "label": "Stress bill (hazardous duty) credit: years of firefighter service per bonus year",
+      "value": 5,
+      "unit": "years",
+      "source": "ers-handbook",
+      "citation": "Hazardous Duty, p.12; Firefighters ... (Tier 1 Only), p.23. Applies to converted Tier 2 per user.",
+      "status": "verified"
+    },
+    "stress.excludesSickLeave": {
+      "label": "Stress credit is figured on service excluding converted sick leave",
+      "value": true,
+      "unit": "",
+      "source": "user",
+      "citation": "User was told sick leave does not count toward the stress bill",
+      "status": "user-confirmed"
+    },
+    "stress.countsForEligibility": {
+      "label": "Stress credit counts toward retirement eligibility",
+      "value": false,
+      "unit": "",
+      "source": "ers-handbook",
+      "citation": "Hazardous Duty, p.12: may not be used to meet creditable service requirements",
+      "status": "verified"
+    },
+    "stress.countsForInServiceDeath": {
+      "label": "Stress credit counts toward eligibility for an in-service death",
+      "value": true,
+      "unit": "",
+      "source": "ers-handbook",
+      "citation": "Death of a Member Prior to Retirement, p.16",
+      "status": "verified"
+    },
+    "sickLeave.daysPerMonth": {
+      "label": "Sick leave conversion chart: days per month of credit",
+      "value": 20,
+      "unit": "days (0-10 days = 0 months, 11-30 = 1 month, then 20 days per month)",
+      "source": "ers-handbook",
+      "citation": "Sick Leave Conversion Tier 1 Only, chart p.22",
+      "status": "verified"
+    },
+    "sickLeave.chartMaxMonths": {
+      "label": "Sick leave conversion chart maximum",
+      "value": 36,
+      "unit": "months (711-730 days); the employer sets the actual cap",
+      "source": "ers-handbook",
+      "citation": "Sick Leave Conversion Tier 1 Only, chart p.22",
+      "status": "verified"
+    },
+    "sickLeave.countsForEligibility": {
+      "label": "Converted sick leave counts toward retirement eligibility",
+      "value": true,
+      "unit": "",
+      "source": "ers-handbook",
+      "citation": "Sick Leave Conversion Tier 1 Only, p.21",
+      "status": "verified"
+    },
+    "plop.maxMonths": {
+      "label": "PLOP maximum",
+      "value": 24,
+      "unit": "months of the Maximum benefit, $1,000 increments",
+      "source": "ers-handbook",
+      "citation": "Partial Lump Sum Option Plan, pp.27-28",
+      "status": "verified"
+    },
+    "plop.reductionPer1000": {
+      "label": "PLOP monthly reduction per $1,000 by age at retirement (Maximum option)",
+      "value": {
+        "42": 6.58,
+        "43": 6.63,
+        "44": 6.67,
+        "45": 6.72,
+        "46": 6.78,
+        "47": 6.84,
+        "48": 6.9,
+        "49": 6.95,
+        "50": 7.01,
+        "51": 7.06,
+        "52": 7.12,
+        "53": 7.19,
+        "54": 7.26,
+        "55": 7.33,
+        "56": 7.41,
+        "57": 7.5,
+        "58": 7.59,
+        "59": 7.69,
+        "60": 7.8,
+        "61": 7.92,
+        "62": 8.05,
+        "63": 8.19,
+        "64": 8.35,
+        "65": 8.52,
+        "66": 8.7,
+        "67": 8.89,
+        "68": 9.1,
+        "69": 9.34,
+        "70": 9.59,
+        "71": 9.86,
+        "72": 10.16,
+        "73": 10.49,
+        "74": 10.85,
+        "75": 11.24
+      },
+      "unit": "$ per month per $1,000 of lump sum",
+      "source": "ers-handbook",
+      "citation": "PLOP Benefit Reduction Table, p.29",
+      "status": "verified"
+    },
+    "death.preEligibility": {
+      "label": "Death before retirement eligibility (1+ year of service)",
+      "value": "contributions + interest + prior fiscal year salary",
+      "unit": "",
+      "source": "ers-handbook",
+      "citation": "Preretirement Death Benefit, p.16",
+      "status": "verified"
+    },
+    "death.eligibleOption": {
+      "label": "Death after retirement eligibility: surviving spouse may choose Option 2 lifetime benefit",
+      "value": "option2",
+      "unit": "",
+      "source": "ers-handbook",
+      "citation": "Preretirement Death Benefit, Eligible to Retire, p.16",
+      "status": "verified"
+    },
+    "contributions.interestRate": {
+      "label": "Interest credited on member contributions",
+      "value": 0.04,
+      "unit": "per year",
+      "source": "ers-t2-handbook-2019",
+      "citation": "Refund of contributions: four percent per annum (2019 Tier 2 handbook); used as an estimate for Tier 1",
+      "status": "estimate"
+    },
+    "reemployment.earningsLimit": {
+      "label": "Retiree earnings limit with an RSA participating employer",
+      "value": 31000,
+      "unit": "$ per calendar year (2019 figure, CPI-indexed; check the RSA website for the current year)",
+      "source": "ers-t2-handbook-2019",
+      "citation": "Postretirement Employment, p.22",
+      "status": "estimate"
+    },
+    "cola.retiree": {
+      "label": "Retiree COLA",
+      "value": 0,
+      "unit": "per year; ad hoc only, needs the Legislature and the city council",
+      "source": "ers-handbook",
+      "citation": "Cost-of-Living Adjustments; not part of the plan",
+      "status": "verified"
+    }
+  }
+}
