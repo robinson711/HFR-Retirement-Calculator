@@ -1,7 +1,18 @@
 // Scenario model: turns the user's inputs into every result the screens show.
 // Pure functions only; the UI calls `computeScenario` and the comparison helpers.
 import schedule from '../data/salary-schedule.json';
-import { heldAccounts, project, monteCarlo, sustainableSpending, type Account, type AccountKind, type Assumptions, type PlanInputs, type Projection, type MonteCarloResult } from './cashflow';
+import {
+  heldAccounts,
+  project,
+  monteCarlo,
+  sustainableSpending,
+  type Account,
+  type AccountKind,
+  type Assumptions,
+  type PlanInputs,
+  type Projection,
+  type MonteCarloResult,
+} from './cashflow';
 import { deathBeforeRetirement } from './death';
 import { accumulatedContributions, averageFinalSalary, maximumMonthly, tierRules, type MaximumBenefit } from './pension';
 import { applyPlop, plopAmountForMonths, plopBreakEvenReturn, type PlopResult } from './plop';
@@ -155,10 +166,43 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
       letter: { maximum: null, option1: null, option2: null, option3: null, option4: null },
     },
     accounts: [
-      { id: '457b', label: '457(b) traditional', kind: '457b', owner: 'member', balance: 50000, contribution: 6000, allocation: { stocks: 0.8, bonds: 0.2, cash: 0 } },
-      { id: '457b-roth', label: '457(b) Roth', kind: 'roth457', owner: 'member', balance: 0, contribution: 0, allocation: { stocks: 0.8, bonds: 0.2, cash: 0 } },
-      { id: 'spouse', label: 'Spouse TSP / IRA', kind: 'pretax', owner: 'spouse', balance: 20000, contribution: 3000, allocation: { stocks: 0.8, bonds: 0.2, cash: 0 } },
-      { id: 'taxable', label: 'Taxable brokerage', kind: 'taxable', owner: 'member', balance: 10000, contribution: 1200, allocation: { stocks: 0.7, bonds: 0.2, cash: 0.1 }, basisPct: 0.8 },
+      {
+        id: '457b',
+        label: '457(b) traditional',
+        kind: '457b',
+        owner: 'member',
+        balance: 50000,
+        contribution: 6000,
+        allocation: { stocks: 0.8, bonds: 0.2, cash: 0 },
+      },
+      {
+        id: '457b-roth',
+        label: '457(b) Roth',
+        kind: 'roth457',
+        owner: 'member',
+        balance: 0,
+        contribution: 0,
+        allocation: { stocks: 0.8, bonds: 0.2, cash: 0 },
+      },
+      {
+        id: 'spouse',
+        label: 'Spouse TSP / IRA',
+        kind: 'pretax',
+        owner: 'spouse',
+        balance: 20000,
+        contribution: 3000,
+        allocation: { stocks: 0.8, bonds: 0.2, cash: 0 },
+      },
+      {
+        id: 'taxable',
+        label: 'Taxable brokerage',
+        kind: 'taxable',
+        owner: 'member',
+        balance: 10000,
+        contribution: 1200,
+        allocation: { stocks: 0.7, bonds: 0.2, cash: 0.1 },
+        basisPct: 0.8,
+      },
       { id: 'roth', label: 'Roth IRA', kind: 'roth', owner: 'member', balance: 15000, contribution: 3000, allocation: { stocks: 1, bonds: 0, cash: 0 } },
     ],
     withdrawalOrder: ['taxable', '457b', 'pretax', 'roth457', 'roth'],
@@ -202,7 +246,10 @@ const ageYears = (birth: YearMonth, date: YearMonth) => monthsBetween(birth, dat
 
 function sickHoursAt(inputs: ScenarioInputs, date: YearMonth): number {
   const years = Math.max(0, monthsBetween(inputs.today, date) / 12);
-  return Math.max(0, inputs.sickLeave.balanceHours + (WORK_SCHEDULES[inputs.sickLeave.workSchedule].accrualHoursPerYear - inputs.sickLeave.usedHoursPerYear) * years);
+  return Math.max(
+    0,
+    inputs.sickLeave.balanceHours + (WORK_SCHEDULES[inputs.sickLeave.workSchedule].accrualHoursPerYear - inputs.sickLeave.usedHoursPerYear) * years,
+  );
 }
 
 function sickCreditAt(inputs: ScenarioInputs, date: YearMonth): number {
@@ -227,13 +274,27 @@ export function retirementDate(inputs: ScenarioInputs): YearMonth {
 function salaryThrough(inputs: ScenarioInputs, lastFiscalYear: number): SalaryYear[] {
   const currentFY = fiscalYearOf(inputs.today);
   const cityServiceMonthsAtStart = Math.max(0, monthsBetween(inputs.member.hire, { year: currentFY - 1, month: 10 }));
-  const forward = salaryPath(SCHEDULE, { ...inputs.pay, currentFiscalYear: currentFY, cityServiceMonthsAtStart, longevityPerMonth: 5.25 }, Math.max(currentFY, lastFiscalYear));
+  const forward = salaryPath(
+    SCHEDULE,
+    { ...inputs.pay, currentFiscalYear: currentFY, cityServiceMonthsAtStart, longevityPerMonth: 5.25 },
+    Math.max(currentFY, lastFiscalYear),
+  );
   // Back-fill earlier years (for a retirement within 10 years) by removing the schedule COLA.
   const back: SalaryYear[] = [];
   const first = forward[0]!;
   for (let k = 10; k >= 1; k--) {
     const f = Math.pow(1 + inputs.pay.scheduleColaPct, -k);
-    back.push({ ...first, fiscalYear: currentFY - k, base: first.base * f, incentive: first.incentive * f, overtime: first.overtime * f, longevity: first.longevity, gross: first.gross * f, earnable: first.earnable * f, promoted: false });
+    back.push({
+      ...first,
+      fiscalYear: currentFY - k,
+      base: first.base * f,
+      incentive: first.incentive * f,
+      overtime: first.overtime * f,
+      longevity: first.longevity,
+      gross: first.gross * f,
+      earnable: first.earnable * f,
+      promoted: false,
+    });
   }
   return [...back, ...forward].filter((y) => y.fiscalYear <= lastFiscalYear);
 }
@@ -248,7 +309,10 @@ export function computePension(inputs: ScenarioInputs, dateOverride?: YearMonth)
   // Complete fiscal years before the retirement month's fiscal year.
   const lastFullFY = fiscalYearOf(date) - 1;
   const salary = salaryThrough(inputs, Math.max(lastFullFY, fiscalYearOf(inputs.today)));
-  const capped = capEarnable(salary.filter((y) => y.fiscalYear <= lastFullFY), rules.earnableCap);
+  const capped = capEarnable(
+    salary.filter((y) => y.fiscalYear <= lastFullFY),
+    rules.earnableCap,
+  );
   const last10 = capped.slice(-10);
   const afs = averageFinalSalary(last10, rules.afsYears);
   const afsYears = [...last10].sort((a, b) => b.earnable - a.earnable).slice(0, rules.afsYears);
@@ -263,7 +327,9 @@ export function computePension(inputs: ScenarioInputs, dateOverride?: YearMonth)
   const estimatedPrior =
     inputs.rsaAccountBalance ??
     accumulatedContributions(
-      Array.from({ length: Math.max(0, Math.round(actualYears - futureYears.length)) }, (_, i) => ({ earnable: (priorYears[priorYears.length - 1]?.earnable ?? afs) * Math.pow(1 + inputs.pay.scheduleColaPct, -i) })).reverse(),
+      Array.from({ length: Math.max(0, Math.round(actualYears - futureYears.length)) }, (_, i) => ({
+        earnable: (priorYears[priorYears.length - 1]?.earnable ?? afs) * Math.pow(1 + inputs.pay.scheduleColaPct, -i),
+      })).reverse(),
       rules.contributionRate,
     );
   const annuitySavings = accumulatedContributions(futureYears, rules.contributionRate, estimatedPrior);
@@ -288,8 +354,28 @@ export function computePension(inputs: ScenarioInputs, dateOverride?: YearMonth)
   const survivorMonthly = finalMonthly * share;
 
   const lastBase = capped[capped.length - 1]?.base ?? 0;
-  const tax = computeTax({ filing: inputs.filing, calendarYear: date.year, over65Count: 0, pension: maximum.monthly * 12, wages: 0, pretaxWithdrawals: 0, socialSecurity: 0, capitalGains: 0, earlyWithdrawalPenaltyBase: 0 });
-  const bumped = computeTax({ filing: inputs.filing, calendarYear: date.year, over65Count: 0, pension: maximum.monthly * 12, wages: 10000, pretaxWithdrawals: 0, socialSecurity: 0, capitalGains: 0, earlyWithdrawalPenaltyBase: 0 });
+  const tax = computeTax({
+    filing: inputs.filing,
+    calendarYear: date.year,
+    over65Count: 0,
+    pension: maximum.monthly * 12,
+    wages: 0,
+    pretaxWithdrawals: 0,
+    socialSecurity: 0,
+    capitalGains: 0,
+    earlyWithdrawalPenaltyBase: 0,
+  });
+  const bumped = computeTax({
+    filing: inputs.filing,
+    calendarYear: date.year,
+    over65Count: 0,
+    pension: maximum.monthly * 12,
+    wages: 10000,
+    pretaxWithdrawals: 0,
+    socialSecurity: 0,
+    capitalGains: 0,
+    earlyWithdrawalPenaltyBase: 0,
+  });
   const marginal = (bumped.total - tax.total) / 10000;
   const sickLeave = compareSickLeave({
     hours: sickHours,
@@ -349,7 +435,11 @@ export interface SsDetail {
 export function resolveSocialSecurity(
   inputs: ScenarioInputs,
   pension: PensionResult,
-): { benefits: { member: { monthly: number; claimAge: number } | null; spouse: { monthly: number; claimAge: number } | null }; member: SsDetail | null; spouse: SsDetail | null } {
+): {
+  benefits: { member: { monthly: number; claimAge: number } | null; spouse: { monthly: number; claimAge: number } | null };
+  member: SsDetail | null;
+  spouse: SsDetail | null;
+} {
   const ss = inputs.socialSecurity;
   const currentFY = fiscalYearOf(inputs.today);
   const detail = (p: SsPerson, birthYear: number, future: number[]): SsDetail | null => {
@@ -480,7 +570,17 @@ export function computeLeave(inputs: ScenarioInputs, pension: PensionResult): Le
     priorYearWages: prior?.gross ?? 0,
   });
   const taxOn = (wages: number) =>
-    computeTax({ filing: inputs.filing, calendarYear: d.year, over65Count: 0, pension: otherPension, wages, pretaxWithdrawals: 0, socialSecurity: 0, capitalGains: 0, earlyWithdrawalPenaltyBase: 0 }).total;
+    computeTax({
+      filing: inputs.filing,
+      calendarYear: d.year,
+      over65Count: 0,
+      pension: otherPension,
+      wages,
+      pretaxWithdrawals: 0,
+      socialSecurity: 0,
+      capitalGains: 0,
+      earlyWithdrawalPenaltyBase: 0,
+    }).total;
   const baseTax = taxOn(otherWages);
   const fica = inputs.socialSecurity.cityJobCovered ? payout.total * 0.0765 : payout.total * 0.0145;
   const scenario = (deferred: number): LeaveScenario => {
@@ -694,9 +794,17 @@ export interface Variant {
   successRate: number;
   medianEnding: number;
   lumpSum: number;
+  /** The plan behind this option, kept so differences between options can be explained. */
+  plan: PlanInputs;
 }
 
-export function variantOf(label: string, inputs: ScenarioInputs, paths: number, note?: string, planOverrides?: (p: PlanInputs) => Partial<PlanInputs>): Variant {
+export function variantOf(
+  label: string,
+  inputs: ScenarioInputs,
+  paths: number,
+  note?: string,
+  planOverrides?: (p: PlanInputs) => Partial<PlanInputs>,
+): Variant {
   const pension = computePension(inputs);
   const base = planInputs(inputs, pension);
   const plan = { ...base, ...(planOverrides ? planOverrides(base) : {}) };
@@ -710,12 +818,50 @@ export function variantOf(label: string, inputs: ScenarioInputs, paths: number, 
     successRate: mc.successRate,
     medianEnding: mc.percentiles[mc.percentiles.length - 1]?.p50 ?? 0,
     lumpSum: pension.plop.lumpSum,
+    plan,
   };
+}
+
+export interface BreakdownLine {
+  label: string;
+  /** Change in sustainable spending, today's dollars a year. */
+  amount: number;
 }
 
 export interface Comparison {
   title: string;
   variants: Variant[];
+  /** Why the first option's sustainable spending differs from the second's, piece by piece. */
+  breakdown?: { from: string; to: string; lines: BreakdownLine[] };
+}
+
+/**
+ * Splits the gap in sustainable spending between two plans into named pieces. Each piece swaps a few plan fields
+ * from `from` to `to`; because the pieces interact, each one is the average of swapping it first-to-last and
+ * last-to-first. Whatever is left (fields no piece names) is reported as "Everything else" when it isn't tiny.
+ */
+export function explainDifference(from: PlanInputs, to: PlanInputs, pieces: Array<{ label: string; keys: Array<keyof PlanInputs> }>): BreakdownLine[] {
+  const s = (p: PlanInputs) => sustainableSpending(p);
+  const pick = (p: PlanInputs, keys: Array<keyof PlanInputs>) => Object.fromEntries(keys.map((k) => [k, p[k]])) as Partial<PlanInputs>;
+  const walk = (order: number[]) => {
+    const gains = new Array<number>(pieces.length).fill(0);
+    let cur = { ...from };
+    let before = s(cur);
+    for (const i of order) {
+      cur = { ...cur, ...pick(to, pieces[i]!.keys) };
+      const after = s(cur);
+      gains[i] = after - before;
+      before = after;
+    }
+    return gains;
+  };
+  const idx = pieces.map((_, i) => i);
+  const fwd = walk(idx);
+  const rev = walk([...idx].reverse());
+  const lines = pieces.map((p, i) => ({ label: p.label, amount: (fwd[i]! + rev[i]!) / 2 }));
+  const rest = s(to) - s(from) - lines.reduce((a, l) => a + l.amount, 0);
+  if (Math.abs(rest) >= 50) lines.push({ label: 'Everything else', amount: rest });
+  return lines;
 }
 
 const withAlloc = (accounts: Account[], kind: AccountKind, allocation: Account['allocation']) =>
@@ -726,18 +872,44 @@ export function comparisons(inputs: ScenarioInputs, paths = 300): Comparison[] {
   const out: Comparison[] = [];
   const target = inputs.retirement.targetServiceYears;
 
+  const full = variantOf(`${target} years`, { ...inputs, sickLeave: { ...inputs.sickLeave, choice: 'cash' } }, paths, 'Sick leave taken as cash');
+  const early = variantOf(
+    `${target - 1} years + sick leave`,
+    { ...inputs, sickLeave: { ...inputs.sickLeave, choice: 'credit' }, retirement: { ...inputs.retirement, targetServiceYears: target - 1 } },
+    paths,
+    'Sick leave converted to service credit',
+  );
+  const monthsLater = (full.retirementDate.year - early.retirementDate.year) * 12 + full.retirementDate.month - early.retirementDate.month;
   out.push({
     title: `Retire at ${target} years vs. one year earlier with sick leave credit`,
-    variants: [
-      variantOf(`${target} years`, { ...inputs, sickLeave: { ...inputs.sickLeave, choice: 'cash' } }, paths, 'Sick leave taken as cash'),
-      variantOf(`${target - 1} years + sick leave`, { ...inputs, sickLeave: { ...inputs.sickLeave, choice: 'credit' }, retirement: { ...inputs.retirement, targetServiceYears: target - 1 } }, paths, 'Sick leave converted to service credit'),
-    ],
+    variants: [full, early],
+    breakdown: {
+      from: early.label,
+      to: full.label,
+      lines: explainDifference(early.plan, full.plan, [
+        {
+          label: `Working ${monthsLater} more month${monthsLater === 1 ? '' : 's'}: pay covers that time, you keep saving, and savings fund a shorter retirement`,
+          keys: ['retirementYear', 'firstYearPensionMonths', 'socialSecurity', 'secondJob'],
+        },
+        {
+          label: 'Bigger monthly pension (more service, stress credit and a later final average salary)',
+          keys: ['pensionMonthly', 'survivorMonthly', 'plopLumpSum'],
+        },
+        { label: 'Sick leave paid as cash instead of used for service credit', keys: ['sickLeaveCashAfterTax'] },
+        { label: 'Other leave payout (at a slightly higher hourly rate)', keys: ['leaveCashAfterTax', 'leaveDeferral'] },
+      ]),
+    },
   });
   out.push({
     title: 'Sick leave: cash vs. service credit',
     variants: [
       variantOf('Cash (50%)', { ...inputs, sickLeave: { ...inputs.sickLeave, choice: 'cash' } }, paths),
-      variantOf('Service credit', { ...inputs, sickLeave: { ...inputs.sickLeave, choice: 'credit' }, retirement: { ...inputs.retirement, dateOverride: base.retirementDate } }, paths, 'Same retirement date, larger pension'),
+      variantOf(
+        'Service credit',
+        { ...inputs, sickLeave: { ...inputs.sickLeave, choice: 'credit' }, retirement: { ...inputs.retirement, dateOverride: base.retirementDate } },
+        paths,
+        'Same retirement date, larger pension',
+      ),
     ],
   });
   if (inputs.pay.promotions.length > 0) {
@@ -752,21 +924,51 @@ export function comparisons(inputs: ScenarioInputs, paths = 300): Comparison[] {
     variants: [
       variantOf('No PLOP', { ...inputs, plop: { ...inputs.plop, months: 0 } }, paths),
       variantOf(`PLOP ${plopMonths} months`, { ...inputs, plop: { ...inputs.plop, months: plopMonths } }, paths, 'Invested per the destination account'),
-      variantOf(`PLOP ${plopMonths} months, 100% stocks`, { ...inputs, plop: { ...inputs.plop, months: plopMonths, destination: 'plop-stocks' } }, paths, 'Rolled into a separate all-stock account', (p) => ({
-        accounts: [...p.accounts, { id: 'plop-stocks', label: 'PLOP rollover (stocks)', kind: 'pretax', owner: 'member', balance: 0, contribution: 0, allocation: { stocks: 1, bonds: 0, cash: 0 } }],
-        plopDestination: 'plop-stocks',
-      })),
+      variantOf(
+        `PLOP ${plopMonths} months, 100% stocks`,
+        { ...inputs, plop: { ...inputs.plop, months: plopMonths, destination: 'plop-stocks' } },
+        paths,
+        'Rolled into a separate all-stock account',
+        (p) => ({
+          accounts: [
+            ...p.accounts,
+            {
+              id: 'plop-stocks',
+              label: 'PLOP rollover (stocks)',
+              kind: 'pretax',
+              owner: 'member',
+              balance: 0,
+              contribution: 0,
+              allocation: { stocks: 1, bonds: 0, cash: 0 },
+            },
+          ],
+          plopDestination: 'plop-stocks',
+        }),
+      ),
     ],
   });
   out.push({
     title: 'Survivor options',
-    variants: (['maximum', 'option1', 'option2', 'option3'] as SurvivorOption[]).map((o) => variantOf(o === 'maximum' ? 'Maximum' : `Option ${o.slice(-1)}`, { ...inputs, survivor: { ...inputs.survivor, option: o } }, paths)),
+    variants: (['maximum', 'option1', 'option2', 'option3'] as SurvivorOption[]).map((o) =>
+      variantOf(o === 'maximum' ? 'Maximum' : `Option ${o.slice(-1)}`, { ...inputs, survivor: { ...inputs.survivor, option: o } }, paths),
+    ),
   });
   out.push({
     title: 'All-stock vs. balanced 457(b)',
     variants: [
-      variantOf('All stocks', { ...inputs, accounts: withAlloc(withAlloc(inputs.accounts, '457b', { stocks: 1, bonds: 0, cash: 0 }), 'roth457', { stocks: 1, bonds: 0, cash: 0 }) }, paths),
-      variantOf('Balanced 60/40', { ...inputs, accounts: withAlloc(withAlloc(inputs.accounts, '457b', { stocks: 0.6, bonds: 0.4, cash: 0 }), 'roth457', { stocks: 0.6, bonds: 0.4, cash: 0 }) }, paths),
+      variantOf(
+        'All stocks',
+        { ...inputs, accounts: withAlloc(withAlloc(inputs.accounts, '457b', { stocks: 1, bonds: 0, cash: 0 }), 'roth457', { stocks: 1, bonds: 0, cash: 0 }) },
+        paths,
+      ),
+      variantOf(
+        'Balanced 60/40',
+        {
+          ...inputs,
+          accounts: withAlloc(withAlloc(inputs.accounts, '457b', { stocks: 0.6, bonds: 0.4, cash: 0 }), 'roth457', { stocks: 0.6, bonds: 0.4, cash: 0 }),
+        },
+        paths,
+      ),
     ],
   });
   return out;

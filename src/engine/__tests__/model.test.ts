@@ -67,6 +67,16 @@ describe('comparisons', () => {
       expect(new Set(values).size).toBe(values.length);
     }
   });
+
+  it('explains the 25 years vs. 24 years + sick leave gap piece by piece, adding up to the whole gap', () => {
+    const [first] = comparisons(defaultInputs({ year: 2026, month: 11 }), 20);
+    const b = first!.breakdown!;
+    const [full, early] = first!.variants;
+    const total = b.lines.reduce((a, l) => a + l.amount, 0);
+    expect(Math.abs(total - (full!.sustainable - early!.sustainable))).toBeLessThan(50);
+    // Every named piece favors working the extra months with sick leave as cash.
+    for (const l of b.lines.slice(0, 3)) expect(l.amount).toBeGreaterThan(0);
+  });
 });
 
 describe("accounts the member doesn't have", () => {
