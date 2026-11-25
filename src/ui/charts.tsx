@@ -98,9 +98,9 @@ export function IncomeChart({ data }: { data: IncomeRow[] }) {
   return (
     <Frame title="Income by source" description="Each year's income in today's dollars, stacked by source, from retirement to the plan age. A yellow band means spending that savings could not cover.">
       <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
-        <CartesianGrid stroke={p.grid} vertical={false} />
-        <XAxis dataKey="age" stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} label={{ value: 'Age', position: 'insideBottomRight', offset: -2, fill: p.text, fontSize: 12 }} />
-        <YAxis tickFormatter={axisMoney} stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} width={56} />
+        <CartesianGrid stroke={p.grid} strokeDasharray="3 4" vertical={false} />
+        <XAxis dataKey="age" stroke={p.grid} tickLine={false} tick={{ fill: p.text, fontSize: 12 }} label={{ value: 'Age', position: 'insideBottomRight', offset: -2, fill: p.text, fontSize: 12 }} />
+        <YAxis tickFormatter={axisMoney} stroke={p.grid} tickLine={false} tick={{ fill: p.text, fontSize: 12 }} width={56} />
         <Tooltip content={tip(p, fmtK, true)} />
         <Legend />
         <Area isAnimationActive={false} type="linear" dataKey="pension" name="RSA pension" stackId="1" stroke={p.s1} fill={p.s1} fillOpacity={0.7} />
@@ -119,9 +119,9 @@ export function BalanceChart({ data }: { data: Array<{ age: number; p10: number;
   return (
     <Frame title="Savings balance" description="Median balance with the 10th to 90th percentile range from 1,000 market paths, and the expected-return path, in today's dollars.">
       <ComposedChart data={rows} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
-        <CartesianGrid stroke={p.grid} vertical={false} />
-        <XAxis dataKey="age" stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} />
-        <YAxis tickFormatter={axisMoney} stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} width={56} />
+        <CartesianGrid stroke={p.grid} strokeDasharray="3 4" vertical={false} />
+        <XAxis dataKey="age" stroke={p.grid} tickLine={false} tick={{ fill: p.text, fontSize: 12 }} />
+        <YAxis tickFormatter={axisMoney} stroke={p.grid} tickLine={false} tick={{ fill: p.text, fontSize: 12 }} width={56} />
         <Tooltip content={tip(p, fmtK)} />
         <Legend />
         <Area isAnimationActive={false} type="linear" dataKey="band" name="10th to 90th percentile" stroke="none" fill={p.band} fillOpacity={0.6} />
@@ -137,9 +137,9 @@ export function PurchasingPowerChart({ data }: { data: Array<{ age: number; nomi
   return (
     <Frame title="Pension purchasing power" description="Monthly pension as paid, and what it buys in today's dollars when there is no cost-of-living raise.">
       <LineChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
-        <CartesianGrid stroke={p.grid} vertical={false} />
-        <XAxis dataKey="age" stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} />
-        <YAxis tickFormatter={(v: number) => `$${Math.round(v / 100) / 10}k`} stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} width={56} />
+        <CartesianGrid stroke={p.grid} strokeDasharray="3 4" vertical={false} />
+        <XAxis dataKey="age" stroke={p.grid} tickLine={false} tick={{ fill: p.text, fontSize: 12 }} />
+        <YAxis tickFormatter={(v: number) => `$${Math.round(v / 100) / 10}k`} stroke={p.grid} tickLine={false} tick={{ fill: p.text, fontSize: 12 }} width={56} />
         <Tooltip content={tip(p, fmtMonthly)} />
         <Legend />
         <Line isAnimationActive={false} type="linear" dataKey="nominal" name="As paid" stroke={p.s1} strokeWidth={2} dot={false} />
@@ -154,9 +154,9 @@ export function PlopChart({ data }: { data: Array<{ age: number; difference: num
   return (
     <Frame title="PLOP: cumulative difference" description="Lump sum invested, minus the pension it gives up, by age, in today's dollars. Above zero, the PLOP is ahead.">
       <LineChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
-        <CartesianGrid stroke={p.grid} vertical={false} />
-        <XAxis dataKey="age" stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} />
-        <YAxis tickFormatter={axisMoney} stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} width={56} />
+        <CartesianGrid stroke={p.grid} strokeDasharray="3 4" vertical={false} />
+        <XAxis dataKey="age" stroke={p.grid} tickLine={false} tick={{ fill: p.text, fontSize: 12 }} />
+        <YAxis tickFormatter={axisMoney} stroke={p.grid} tickLine={false} tick={{ fill: p.text, fontSize: 12 }} width={56} />
         <ReferenceLine y={0} stroke={p.text} />
         <Tooltip content={tip(p, fmtK)} />
         <Line isAnimationActive={false} type="linear" dataKey="difference" name="PLOP ahead by" stroke={p.s3} strokeWidth={2} dot={false} />
