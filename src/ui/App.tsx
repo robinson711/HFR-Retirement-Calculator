@@ -116,7 +116,22 @@ export function App() {
       <div className="app">
         <main id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className={stale ? 'stale' : ''} tabIndex={-1}>
           {tab === 'you' && <You inputs={inputs} set={set} />}
-          {tab === 'pension' && <Pension inputs={inputs} result={result} set={set} />}
+          {tab === 'pension' && (
+            <Pension
+              inputs={inputs}
+              result={result}
+              set={set}
+              onEditSchedule={() => {
+                setTab('you');
+                // Wait for the You tab to render, then take the user to the setting.
+                setTimeout(() => {
+                  const el = document.getElementById('work-schedule');
+                  el?.scrollIntoView({ block: 'center' });
+                  el?.focus();
+                }, 0);
+              }}
+            />
+          )}
           {tab === 'savings' && <Savings inputs={inputs} result={result} set={set} onPreset={(preset) => dispatch({ type: 'preset', preset })} />}
           {tab === 'plan' && <Plan inputs={deferred} result={result} />}
           {tab === 'compare' && <Compare inputs={deferred} />}

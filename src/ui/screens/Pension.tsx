@@ -1,14 +1,14 @@
 import { deathByYear, inServiceDeathEligibility, plopCumulative, plopToDestination, PLOP_MORTGAGE, PLOP_PURCHASE, type ScenarioInputs, type ScenarioResult } from '../../engine/model';
 import { plopLimits } from '../../engine/plop';
-import { WORK_SCHEDULES, type WorkSchedule } from '../../engine/sickLeave';
+import { WORK_SCHEDULES } from '../../engine/sickLeave';
 import { OPTION_LABELS, type SurvivorOption } from '../../engine/survivor';
 import { PlopChart, PurchasingPowerChart } from '../charts';
-import { Assumptions, KeyNumber, MonthYearField, MoneyField, Note, NumberField, PercentField, Section, SelectField, ShowMath, Table, Toggle } from '../components';
+import { Assumptions, KeyNumber, MonthYearField, MoneyField, Note, NumberField, PercentField, Section, SelectField, SettingLine, ShowMath, Table, Toggle } from '../components';
 import { cents, dollars, k, monthly, pct, years, ym } from '../format';
 import { LeavePayout } from './LeavePayout';
 import type { Setter } from './You';
 
-export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; result: ScenarioResult; set: Setter }) {
+export function Pension({ inputs, result, set, onEditSchedule }: { inputs: ScenarioInputs; result: ScenarioResult; set: Setter; onEditSchedule?: () => void }) {
   const p = result.pension;
   const a = inputs.assumptions;
   const sl = p.sickLeave;
@@ -197,17 +197,12 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
       </Section>
 
       <Section title="Sick leave" who="you">
-        <SelectField
-          label="Work schedule"
-          value={inputs.sickLeave.workSchedule}
-          options={Object.entries(WORK_SCHEDULES).map(([k, v]) => [k as WorkSchedule, v.label])}
-          onChange={(workSchedule) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, workSchedule } }))}
-          hint={
-            inputs.sickLeave.workSchedule === 'fireSuppression'
-              ? 'Accrues 145.6 hours a year: 4 hours per pay period, scaled for a 2,912-hour year. 11.2 hours count as one 8-hour day (Personnel Manual 10.7(D)). No cap.'
-              : 'Accrues 104 hours a year: 4 hours per pay period. 8 hours make one day (Personnel Manual 10.7(D)). No cap.'
-          }
-        />
+        <SettingLine label="Work schedule" value={WORK_SCHEDULES[inputs.sickLeave.workSchedule].label} onEdit={onEditSchedule} where="the You and your pay tab" />
+        <p className="hint">
+          {inputs.sickLeave.workSchedule === 'fireSuppression'
+            ? 'Accrues 145.6 hours a year: 4 hours per pay period, scaled for a 2,912-hour year. 11.2 hours count as one 8-hour day (Personnel Manual 10.7(D)). No cap.'
+            : 'Accrues 104 hours a year: 4 hours per pay period. 8 hours make one day (Personnel Manual 10.7(D)). No cap.'}
+        </p>
         <NumberField label="Current balance" value={inputs.sickLeave.balanceHours} min={0} step={1} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, balanceHours: v } }))} />
         <NumberField label="Hours used per year" value={inputs.sickLeave.usedHoursPerYear} min={0} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, usedHoursPerYear: v } }))} />
         <SelectField
@@ -240,7 +235,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         </ShowMath>
       </Section>
 
-      <LeavePayout inputs={inputs} pension={p} set={set} />
+      <LeavePayout inputs={inputs} pension={p} set={set} onEditSchedule={onEditSchedule} />
 
       <Section title="If you die before you can retire" who="spouse">
         <p>
