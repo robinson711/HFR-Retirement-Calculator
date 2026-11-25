@@ -2,8 +2,10 @@
 // Sources:
 //  - Step progression, one step per year on the anniversary date: Personnel Manual 8.7(A)(1).
 //  - Promotion placement: Personnel Manual 8.4(A): the new step is the minimum step of the new grade, or the
-//    first step giving at least 5% for each grade jumped, whichever is higher. The percent is editable.
-//  - Fitness incentive: 5% of base (grade and step) while passing the Physical Capabilities Drill: Manual 8.6(C).
+//    first step giving at least 5% for each grade jumped, whichever is higher. The anniversary date (and so the
+//    yearly step) does not change on promotion: Manual 8.4(C).
+//  - Fitness incentive: 5% of base (grade and step) for passing the Physical Capabilities Drill: Manual 8.6(C).
+//  - The FY2027 schedule file predates the 2% raise granted in 2026, so every rate is raised by colaNotInSchedule.
 //  - Longevity pay: $5.25 per month of continuous service ($63 per year): Manual 8.19.
 //  - Earnable compensation for RSA is capped at 120% (Tier 1) or 125% (Tier 2) of base pay: ERS Handbook p.8.
 // The model works in City fiscal years (October-September), matching RSA's salary averaging.
@@ -12,6 +14,8 @@ export interface SalarySchedule {
   fiscalYear: number;
   effectiveDate: string;
   hoursPerYearFireSuppression: number;
+  /** A raise already granted but not yet printed in the schedule file (e.g. 0.02). Applied to every rate. */
+  colaNotInSchedule?: number;
   grades: Record<string, number[]>;
 }
 
@@ -26,14 +30,10 @@ export interface PayInputs {
   step: number;
   /** Fiscal year the member is in now (the schedule's year unless told otherwise). */
   currentFiscalYear: number;
-  /** A raise already granted but missing from the schedule file (e.g. 0.02). */
-  missingColaPct: number;
   /** Assumed annual schedule COLA going forward (e.g. 0.02). */
   scheduleColaPct: number;
-  /** Fitness incentive as a fraction of base (default 0.05). */
-  fitnessIncentivePct: number;
-  /** First fiscal year the member no longer passes the drill (incentive stops). null = keeps passing. */
-  fitnessStopsFiscalYear: number | null;
+  /** Whether the member gets the fitness incentive (always FITNESS_INCENTIVE_PCT of base). */
+  fitnessIncentive: boolean;
   /** Overtime and other pensionable extra pay in today's dollars per year; grows with the schedule COLA. */
   overtimeAnnual: number;
   /** Whether overtime counts toward RSA earnable compensation (Huntsville: yes, per user). */
@@ -42,9 +42,12 @@ export interface PayInputs {
   cityServiceMonthsAtStart: number;
   longevityPerMonth: number;
   promotions: Promotion[];
-  /** Raise required per grade jumped on promotion (Personnel Manual 8.4(A): 5%). */
-  promotionRaisePerGrade: number;
 }
+
+/** Personnel Manual 8.6(C). */
+export const FITNESS_INCENTIVE_PCT = 0.05;
+/** Personnel Manual 8.4(A): at least 5% for each higher grade. */
+export const PROMOTION_RAISE_PER_GRADE = 0.05;
 
 export interface SalaryYear {
   fiscalYear: number;
@@ -59,15 +62,17 @@ export interface SalaryYear {
   /** Pay counted by RSA after the earnable-compensation cap. */
   earnable: number;
   promoted: boolean;
+  /** Grade and step held just before a promotion this year. */
+  promotedFrom?: { grade: string; step: number };
 }
 
 export function gradeOrder(schedule: SalarySchedule): string[] {
   return Object.keys(schedule.grades).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 }
 
-export function scheduleScale(inputs: Pick<PayInputs, 'missingColaPct' | 'scheduleColaPct'>, schedule: SalarySchedule, fiscalYear: number): number {
+export function scheduleScale(inputs: Pick<PayInputs, 'scheduleColaPct'>, schedule: SalarySchedule, fiscalYear: number): number {
   const years = Math.max(0, fiscalYear - schedule.fiscalYear);
-  return (1 + inputs.missingColaPct) * Math.pow(1 + inputs.scheduleColaPct, years);
+  return (1 + (schedule.colaNotInSchedule ?? 0)) * Math.pow(1 + inputs.scheduleColaPct, years);
 }
 
 export function basePay(schedule: SalarySchedule, grade: string, step: number, scale: number): number {
@@ -87,7 +92,7 @@ export function promotionStep(
   fromGrade: string,
   fromStep: number,
   toGrade: string,
-  raisePerGrade: number,
+  raisePerGrade: number = PROMOTION_RAISE_PER_GRADE,
 ): number {
   const order = gradeOrder(schedule);
   const jumped = order.indexOf(toGrade) - order.indexOf(fromGrade);
@@ -105,18 +110,18 @@ export function salaryPath(schedule: SalarySchedule, inputs: PayInputs, endFisca
   let step = inputs.step;
   const maxSteps = (g: string) => schedule.grades[g]!.length;
   for (let fy = inputs.currentFiscalYear; fy <= endFiscalYear; fy++) {
-    let promoted = false;
+    let promotedFrom: SalaryYear['promotedFrom'];
     if (fy > inputs.currentFiscalYear) step = Math.min(step + 1, maxSteps(grade));
+    const order = gradeOrder(schedule);
     const promo = inputs.promotions.find((p) => p.fiscalYear === fy);
-    if (promo && promo.grade !== grade) {
-      step = promotionStep(schedule, grade, step, promo.grade, inputs.promotionRaisePerGrade);
+    if (promo && order.indexOf(promo.grade) > order.indexOf(grade)) {
+      promotedFrom = { grade, step };
+      step = promotionStep(schedule, grade, step, promo.grade);
       grade = promo.grade;
-      promoted = true;
     }
     const scale = scheduleScale(inputs, schedule, fy);
     const base = basePay(schedule, grade, step, scale);
-    const passing = inputs.fitnessStopsFiscalYear === null || fy < inputs.fitnessStopsFiscalYear;
-    const incentive = passing ? base * inputs.fitnessIncentivePct : 0;
+    const incentive = inputs.fitnessIncentive ? base * FITNESS_INCENTIVE_PCT : 0;
     const colaGrowth = Math.pow(1 + inputs.scheduleColaPct, fy - inputs.currentFiscalYear);
     const overtime = inputs.overtimeAnnual * colaGrowth;
     const serviceMonths = inputs.cityServiceMonthsAtStart + 12 * (fy - inputs.currentFiscalYear);
@@ -132,7 +137,8 @@ export function salaryPath(schedule: SalarySchedule, inputs: PayInputs, endFisca
       longevity,
       gross,
       earnable: inputs.overtimePensionable ? gross : gross - overtime,
-      promoted,
+      promoted: !!promotedFrom,
+      ...(promotedFrom ? { promotedFrom } : {}),
     });
   }
   return years;

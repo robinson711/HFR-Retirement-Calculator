@@ -46,13 +46,24 @@ export function isSaveEnabled() {
   return safeGet(SAVE_FLAG) === '1';
 }
 
+/** Merge a saved or imported scenario over the defaults, so files from older versions still load. */
+export function fromSaved(saved: Partial<ScenarioInputs>): ScenarioInputs {
+  const base = defaultInputs(today());
+  const pay = { ...base.pay, ...(saved.pay ?? {}) } as ScenarioInputs['pay'] & { fitnessIncentivePct?: number };
+  if (typeof pay.fitnessIncentive !== 'boolean') pay.fitnessIncentive = (pay.fitnessIncentivePct ?? 0.05) > 0;
+  for (const old of ['missingColaPct', 'fitnessIncentivePct', 'fitnessStopsFiscalYear', 'promotionRaisePerGrade']) delete (pay as Record<string, unknown>)[old];
+  const sickLeave = { ...base.sickLeave, ...(saved.sickLeave ?? {}) };
+  delete (sickLeave as Record<string, unknown>).capMonths;
+  return { ...base, ...saved, pay, sickLeave, today: today() };
+}
+
 function initial(): ScenarioInputs {
   const base = defaultInputs(today());
   if (!isSaveEnabled()) return base;
   const raw = safeGet(STORAGE_KEY);
   if (!raw) return base;
   try {
-    return { ...base, ...(JSON.parse(raw) as Partial<ScenarioInputs>), today: today() };
+    return fromSaved(JSON.parse(raw) as Partial<ScenarioInputs>);
   } catch {
     return base;
   }
@@ -80,5 +91,5 @@ export function exportJson(inputs: ScenarioInputs) {
 export async function importJson(file: File): Promise<ScenarioInputs> {
   const data = JSON.parse(await file.text()) as { app?: string; inputs?: ScenarioInputs };
   if (data.app !== 'hfr-retirement' || !data.inputs) throw new Error('This file is not an HFR retirement scenario.');
-  return { ...defaultInputs(today()), ...data.inputs, today: today() };
+  return fromSaved(data.inputs);
 }

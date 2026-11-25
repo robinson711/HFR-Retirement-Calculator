@@ -50,14 +50,11 @@ export interface ScenarioInputs {
   pay: {
     grade: string;
     step: number;
-    missingColaPct: number;
     scheduleColaPct: number;
-    fitnessIncentivePct: number;
-    fitnessStopsFiscalYear: number | null;
+    fitnessIncentive: boolean;
     overtimeAnnual: number;
     overtimePensionable: boolean;
     promotions: Promotion[];
-    promotionRaisePerGrade: number;
   };
   sickLeave: {
     balanceHours: number;
@@ -65,7 +62,6 @@ export interface ScenarioInputs {
     usedHoursPerYear: number;
     hoursPerDay: number;
     choice: 'cash' | 'credit';
-    capMonths: number;
     cashPct: number;
   };
   retirement: {
@@ -104,14 +100,11 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
     pay: {
       grade: '15P',
       step: 10,
-      missingColaPct: 0.02,
       scheduleColaPct: 0.02,
-      fitnessIncentivePct: 0.05,
-      fitnessStopsFiscalYear: null,
+      fitnessIncentive: true,
       overtimeAnnual: 0,
       overtimePensionable: true,
       promotions: [],
-      promotionRaisePerGrade: 0.05,
     },
     sickLeave: {
       balanceHours: 800,
@@ -119,7 +112,6 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
       usedHoursPerYear: 0,
       hoursPerDay: 11.2,
       choice: 'cash',
-      capMonths: 36,
       cashPct: 0.5,
     },
     retirement: { targetServiceYears: 25, dateOverride: null },
@@ -179,7 +171,7 @@ function sickHoursAt(inputs: ScenarioInputs, date: YearMonth): number {
 
 function sickCreditAt(inputs: ScenarioInputs, date: YearMonth): number {
   if (inputs.sickLeave.choice !== 'credit' || inputs.member.tier === 'tier2') return 0;
-  return sickLeaveCreditMonths(shiftHoursToDays(sickHoursAt(inputs, date), inputs.sickLeave.hoursPerDay), inputs.sickLeave.capMonths);
+  return sickLeaveCreditMonths(shiftHoursToDays(sickHoursAt(inputs, date), inputs.sickLeave.hoursPerDay));
 }
 
 /** Retirement date: the override, or the first month with the target service that is also eligible. */
@@ -271,7 +263,6 @@ export function computePension(inputs: ScenarioInputs, dateOverride?: YearMonth)
     marginalTaxRate: marginal,
     afs,
     benefitFactor: rules.benefitFactor,
-    capMonths: inputs.sickLeave.capMonths,
     lifeAnnuityFactor: lifeAnnuity({ ...DEFAULT_MORTALITY, discountRate: inputs.assumptions.inflation + 0.02 }, age),
   });
 

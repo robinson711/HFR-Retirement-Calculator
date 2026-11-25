@@ -1,15 +1,19 @@
 import { SCHEDULE, type ScenarioInputs } from '../../engine/model';
-import { gradeOrder } from '../../engine/salary';
+import { basePay, gradeOrder, PROMOTION_RAISE_PER_GRADE, salaryPath, type Promotion } from '../../engine/salary';
+import { fiscalYearOf } from '../../engine/service';
 import { SHIFT_ACCRUAL_HOURS_PER_YEAR } from '../../engine/sickLeave';
 import { MonthYearField, MoneyField, Note, NumberField, PercentField, Section, SelectField, Toggle } from '../components';
-import { dollars } from '../format';
+import { dollars, pct } from '../format';
+
+/** Today's rates: the schedule file plus the raise it does not show yet. */
+const todayScale = 1 + (SCHEDULE.colaNotInSchedule ?? 0);
+const MAX_PROMOTIONS = 4;
 
 export type Setter = (update: (s: ScenarioInputs) => ScenarioInputs) => void;
 
 export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
   const grades = gradeOrder(SCHEDULE);
   const steps = SCHEDULE.grades[inputs.pay.grade]?.length ?? 25;
-  const promo = inputs.pay.promotions[0];
   const tier2 = inputs.member.tier === 'tier2';
   return (
     <div className="grid">
@@ -51,33 +55,23 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
       </Section>
 
       <Section title="Pay">
-        <p className="lead">From the FY{SCHEDULE.fiscalYear} public safety salary schedule, effective {SCHEDULE.effectiveDate}.</p>
+        <p className="lead">
+          From the FY{SCHEDULE.fiscalYear} public safety salary schedule, effective {SCHEDULE.effectiveDate}, plus the {pct(todayScale - 1, 0)} raise granted this year that the
+          schedule file does not show yet.
+        </p>
         <div className="row">
-          <SelectField label="Current grade" value={inputs.pay.grade} options={grades.map((g) => [g, g])} onChange={(grade) => set((s) => ({ ...s, pay: { ...s.pay, grade } }))} />
+          <SelectField label="Current grade" value={inputs.pay.grade} options={grades.map((g) => [g, g])} onChange={(grade) => set((s) => ({ ...s, pay: { ...s.pay, grade, promotions: [] } }))} />
           <NumberField label="Current step" value={inputs.pay.step} min={1} max={steps} onChange={(step) => set((s) => ({ ...s, pay: { ...s.pay, step: Math.min(steps, Math.max(1, Math.round(step))) } }))} />
         </div>
         <p className="hint">
-          Base pay at this grade and step: {dollars((SCHEDULE.grades[inputs.pay.grade]?.[inputs.pay.step - 1] ?? 0) * (1 + inputs.pay.missingColaPct))} a year,
-          including the COLA below. You move up one step a year.
+          Base pay at this grade and step: {dollars(basePay(SCHEDULE, inputs.pay.grade, inputs.pay.step, todayScale))} a year. You move up one step a year on your anniversary date.
         </p>
-        <PercentField
-          label="Raise not yet in the schedule file"
-          value={inputs.pay.missingColaPct}
-          onChange={(v) => set((s) => ({ ...s, pay: { ...s.pay, missingColaPct: v } }))}
-          hint="The FY2027 schedule file does not include the 2% COLA granted this year."
-        />
         <PercentField label="Schedule COLA per year (assumed)" value={inputs.pay.scheduleColaPct} onChange={(v) => set((s) => ({ ...s, pay: { ...s.pay, scheduleColaPct: v } }))} />
-        <PercentField
-          label="Fitness incentive"
-          value={inputs.pay.fitnessIncentivePct}
-          onChange={(v) => set((s) => ({ ...s, pay: { ...s.pay, fitnessIncentivePct: v } }))}
-          hint="5% of base pay while you pass the Physical Capabilities Drill (Personnel Manual 8.6(C))."
-        />
-        <NumberField
-          label="Stop passing the drill in fiscal year (0 = never)"
-          value={inputs.pay.fitnessStopsFiscalYear ?? 0}
-          min={0}
-          onChange={(v) => set((s) => ({ ...s, pay: { ...s.pay, fitnessStopsFiscalYear: v > 0 ? Math.round(v) : null } }))}
+        <Toggle
+          label="Fitness incentive (5% of base pay)"
+          checked={inputs.pay.fitnessIncentive}
+          onChange={(fitnessIncentive) => set((s) => ({ ...s, pay: { ...s.pay, fitnessIncentive } }))}
+          hint="Paid for passing the Physical Capabilities Drill (Personnel Manual 8.6(C))."
         />
         <MoneyField
           label="Overtime per year (today's dollars)"
@@ -87,37 +81,7 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
         />
       </Section>
 
-      <Section title="Promotion">
-        <Toggle
-          label="Plan a promotion"
-          checked={!!promo}
-          onChange={(on) =>
-            set((s) => ({
-              ...s,
-              pay: { ...s.pay, promotions: on ? [{ grade: grades[Math.min(grades.length - 1, grades.indexOf(s.pay.grade) + 1)]!, fiscalYear: s.today.year + 3 }] : [] },
-            }))
-          }
-        />
-        {promo && (
-          <>
-            <div className="row">
-              <SelectField
-                label="Target grade"
-                value={promo.grade}
-                options={grades.filter((g) => grades.indexOf(g) > grades.indexOf(inputs.pay.grade)).map((g) => [g, g])}
-                onChange={(grade) => set((s) => ({ ...s, pay: { ...s.pay, promotions: [{ ...promo, grade }] } }))}
-              />
-              <NumberField label="Fiscal year" value={promo.fiscalYear} onChange={(fiscalYear) => set((s) => ({ ...s, pay: { ...s.pay, promotions: [{ ...promo, fiscalYear: Math.round(fiscalYear) }] } }))} />
-            </div>
-            <PercentField
-              label="Minimum raise per grade jumped"
-              value={inputs.pay.promotionRaisePerGrade}
-              onChange={(v) => set((s) => ({ ...s, pay: { ...s.pay, promotionRaisePerGrade: v } }))}
-              hint="Personnel Manual 8.4(A): you land on the first step that gives at least 5% for each grade jumped."
-            />
-          </>
-        )}
-      </Section>
+      <Promotions inputs={inputs} set={set} />
 
       <Section title="Sick leave">
         <NumberField label="Current balance (shift hours)" value={inputs.sickLeave.balanceHours} min={0} step={1} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, balanceHours: v } }))} />
@@ -149,14 +113,7 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
           onChange={(choice) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, choice } }))}
           hint="One or the other, not both (Personnel Manual 10.7(H))."
         />
-        <NumberField
-          label="Most months of credit the city allows"
-          value={inputs.sickLeave.capMonths}
-          min={0}
-          max={36}
-          onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, capMonths: Math.round(v) } }))}
-          hint="RSA's chart tops out at 36 months (730 days). Confirm the city's cap with Human Resources."
-        />
+        <p className="hint">Sick leave credit is capped at 36 months (730 days), the top of RSA's conversion chart.</p>
         {tier2 && <Note kind="warn">Tier II members cannot convert sick leave to service credit (ERS Handbook p.21).</Note>}
       </Section>
 
@@ -185,5 +142,119 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
         />
       </Section>
     </div>
+  );
+}
+
+interface PromotionResult {
+  promotion: Promotion;
+  fromGrade: string;
+  fromStep: number;
+  toStep: number;
+  jumped: number;
+}
+
+/** Where each planned promotion lands, using the same salary path the pension uses. */
+function promotionResults(inputs: ScenarioInputs): Array<PromotionResult | null> {
+  const promos = inputs.pay.promotions;
+  if (promos.length === 0) return [];
+  const currentFiscalYear = fiscalYearOf(inputs.today);
+  const end = Math.max(currentFiscalYear, ...promos.map((p) => p.fiscalYear));
+  const path = salaryPath(SCHEDULE, { ...inputs.pay, currentFiscalYear, cityServiceMonthsAtStart: 0, longevityPerMonth: 0 }, end);
+  const grades = gradeOrder(SCHEDULE);
+  return promos.map((promotion) => {
+    const y = path.find((r) => r.fiscalYear === promotion.fiscalYear && r.promotedFrom && r.grade === promotion.grade);
+    if (!y?.promotedFrom) return null;
+    return {
+      promotion,
+      fromGrade: y.promotedFrom.grade,
+      fromStep: y.promotedFrom.step,
+      toStep: y.step,
+      jumped: grades.indexOf(y.grade) - grades.indexOf(y.promotedFrom.grade),
+    };
+  });
+}
+
+function Promotions({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
+  const grades = gradeOrder(SCHEDULE);
+  const promos = inputs.pay.promotions;
+  const firstFY = fiscalYearOf(inputs.today);
+  const results = promotionResults(inputs);
+  const gradeBefore = (i: number) => (i === 0 ? inputs.pay.grade : promos[i - 1]!.grade);
+  const yearAfter = (i: number) => (i === 0 ? firstFY : promos[i - 1]!.fiscalYear + 1);
+  const update = (next: Promotion[]) => set((s) => ({ ...s, pay: { ...s.pay, promotions: next } }));
+  /** Keep later promotions valid: each one above the grade before it, in a later fiscal year. */
+  const tidy = (list: Promotion[]): Promotion[] => {
+    const out: Promotion[] = [];
+    for (const p of list) {
+      const prevGrade = out.length ? out[out.length - 1]!.grade : inputs.pay.grade;
+      const minFY = out.length ? out[out.length - 1]!.fiscalYear + 1 : firstFY;
+      if (grades.indexOf(p.grade) <= grades.indexOf(prevGrade)) break;
+      out.push({ grade: p.grade, fiscalYear: Math.max(minFY, p.fiscalYear) });
+    }
+    return out;
+  };
+  const lastGrade = promos.length ? promos[promos.length - 1]!.grade : inputs.pay.grade;
+  const canAdd = promos.length < MAX_PROMOTIONS && grades.indexOf(lastGrade) < grades.length - 1;
+  const add = () => {
+    const next = grades[grades.indexOf(lastGrade) + 1]!;
+    const fy = promos.length ? promos[promos.length - 1]!.fiscalYear + 3 : firstFY + 3;
+    update([...promos, { grade: next, fiscalYear: fy }]);
+  };
+
+  return (
+    <Section title="Promotions">
+      <p className="lead">
+        Personnel Manual 8.4(A): on promotion you move to the first step of the new grade that pays at least {pct(PROMOTION_RAISE_PER_GRADE, 0)} more for each grade you
+        jump, or step 1 if that is higher. Your anniversary date stays the same, so you keep moving up one step a year (8.4(C)).
+      </p>
+      {promos.length === 0 && <p className="hint">No promotions planned. Add one to see which step you land on and how it changes your pension.</p>}
+      {promos.map((promo, i) => {
+        const r = results[i];
+        const before = gradeBefore(i);
+        const options = grades.filter((g) => grades.indexOf(g) > grades.indexOf(before)).map((g) => [g, g] as [string, string]);
+        const fromPay = r ? basePay(SCHEDULE, r.fromGrade, r.fromStep, todayScale) : 0;
+        const toPay = r ? basePay(SCHEDULE, promo.grade, r.toStep, todayScale) : 0;
+        return (
+          <fieldset className="promotion" key={i}>
+            <legend>Promotion {i + 1}</legend>
+            <div className="row">
+              <SelectField
+                label="To grade"
+                value={promo.grade}
+                options={options}
+                onChange={(grade) => update(tidy(promos.map((p, j) => (j === i ? { ...p, grade } : p))))}
+              />
+              <NumberField
+                label="In fiscal year (Oct to Sep)"
+                value={promo.fiscalYear}
+                min={yearAfter(i)}
+                max={firstFY + 40}
+                onChange={(v) => update(tidy(promos.map((p, j) => (j === i ? { ...p, fiscalYear: Math.max(yearAfter(i), Math.round(v)) } : p))))}
+              />
+            </div>
+            {r ? (
+              <p className="promotion-result">
+                In FY{promo.fiscalYear} you would be at {r.fromGrade} step {r.fromStep} ({dollars(fromPay)}). Jumping {r.jumped} grade{r.jumped > 1 ? 's' : ''} needs at least{' '}
+                {pct(PROMOTION_RAISE_PER_GRADE * r.jumped, 0)} more ({dollars(fromPay * (1 + PROMOTION_RAISE_PER_GRADE * r.jumped))}), so you land on{' '}
+                <strong>
+                  {promo.grade} step {r.toStep}
+                </strong>{' '}
+                at {dollars(toPay)}, a {pct(toPay / fromPay - 1, 1)} raise. Pay shown at today&apos;s rates.
+              </p>
+            ) : (
+              <Note kind="warn">This promotion could not be placed. Check the grade and fiscal year.</Note>
+            )}
+            <button type="button" className="link-button" onClick={() => update(tidy(promos.filter((_, j) => j !== i)))}>
+              Remove promotion {i + 1}
+            </button>
+          </fieldset>
+        );
+      })}
+      {canAdd && (
+        <button type="button" className="button secondary" onClick={add}>
+          Add a promotion
+        </button>
+      )}
+    </Section>
   );
 }

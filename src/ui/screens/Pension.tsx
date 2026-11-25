@@ -33,17 +33,12 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         <KeyNumber label="Maximum benefit" value={monthly(p.maximum.monthly)} sub="Before any survivor option or PLOP" />
       </div>
       {!p.eligibility.eligible && <Note kind="warn">Not eligible to retire on this date: {p.eligibility.reason}.</Note>}
-      {inputs.pay.fitnessIncentivePct > 0 && (
-        <Note kind="warn">
-          Your final 3 fiscal years ({p.fitnessFlagYears.join(', ')}) set your average salary. The 5% fitness incentive only counts while you keep passing the Physical Capabilities Drill.
-        </Note>
-      )}
       <Assumptions
         items={[
           ['Average final salary', `${dollars(p.maximum.afs)}: highest ${p.afsYears.length} of the last 10 fiscal years`],
           ['Benefit factor', pct(p.maximum.factor, 4)],
           ['Service credit', `${years(p.service.actualMonths)} actual + ${years(p.service.sickLeaveMonths)} sick leave + ${years(p.service.stressMonths)} stress credit`],
-          ['Pay', `Schedule COLA ${pct(inputs.pay.scheduleColaPct)} a year, one step a year, fitness incentive ${pct(inputs.pay.fitnessIncentivePct)}`],
+          ['Pay', `Schedule COLA ${pct(inputs.pay.scheduleColaPct)} a year, one step a year, ${inputs.pay.fitnessIncentive ? 'fitness incentive 5%' : 'no fitness incentive'}, 2% raise added to the FY2027 schedule`],
           ['Survivor option', p.chosen.basis === 'letter' ? 'From your RSA estimate letter' : 'Rough estimate (enter your letter below for the exact figure)'],
         ]}
       />

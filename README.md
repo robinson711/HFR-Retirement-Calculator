@@ -10,7 +10,7 @@ Everything runs in the browser. There is no backend, no account, no analytics, a
 
 ## Updating the rules each year
 
-- **Salary schedule:** replace `src/data/salary-schedule.json` with the new public safety schedule (annual pay by grade and step) and update `fiscalYear` and `effectiveDate`.
+- **Salary schedule:** replace `src/data/salary-schedule.json` with the new public safety schedule (annual pay by grade and step) and update `fiscalYear` and `effectiveDate`. Set `colaNotInSchedule` to any raise already granted that the file does not show yet (0.02 for FY2027), or 0 if the file includes it.
 - **Rules:** `src/rules/rsa-ers.json` (RSA), `src/rules/tax.json` (federal and Alabama) and `src/rules/sources.json`. Each rule has a value, unit, source, citation and status (`verified`, `user-confirmed` or `estimate`). The in-app "Rules and sources" page lists them all.
 
 ## Development
