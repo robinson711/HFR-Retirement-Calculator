@@ -48,7 +48,7 @@ export function Compare({ inputs }: { inputs: ScenarioInputs }) {
                 'Option',
                 'Retire',
                 'Monthly pension',
-                c.title === plopTitle ? 'Lump sum' : 'Note',
+                ...(c.title === plopTitle ? ['Lump sum', 'Where it goes'] : ['Note']),
                 'Sustainable spending',
                 `Difference vs. ${base.label}`,
                 'Success rate',
@@ -58,7 +58,9 @@ export function Compare({ inputs }: { inputs: ScenarioInputs }) {
                 v.label,
                 ym(v.retirementDate),
                 monthly(v.monthlyPension),
-                c.title === plopTitle ? k(v.lumpSum) : (v.note ?? ''),
+                ...(c.title === plopTitle
+                  ? [v.lumpSum > 0 ? k(v.lumpSum) : '—', v.lumpSum > 0 ? (v.note ?? '') : 'Full monthly pension, no lump sum']
+                  : [v.note ?? '']),
                 `${k(v.sustainable)}/yr`,
                 v === base ? '—' : signed(v.sustainable - base.sustainable),
                 pct(v.successRate, 0),

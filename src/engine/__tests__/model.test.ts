@@ -1,4 +1,4 @@
-import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension, inServiceDeathEligibility, planInputs, psoSavings } from '../model';
+import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension, inServiceDeathEligibility, planInputs, plopToDestination, psoSavings } from '../model';
 import { project } from '../cashflow';
 
 describe('scenario model', () => {
@@ -104,5 +104,28 @@ describe('public safety officer premium exclusion in the projection', () => {
     expect(s.perYear).toBeGreaterThan(0);
     const dead = project({ ...plan, memberDeathYear: plan.retirementYear + 1 }).rows.filter((r) => r.year >= plan.retirementYear + 1);
     for (const r of dead) expect(r.psoExcluded).toBe(0);
+  });
+});
+
+describe('where the PLOP goes', () => {
+  const inputs = { ...defaultInputs({ year: 2026, month: 11 }), plop: { months: 24, destination: '457b', per1000Override: null } };
+  it('is a tax-free rollover into the traditional 457(b)', () => {
+    const d = plopToDestination(inputs, computePension(inputs));
+    expect(d.rollover).toBe(true);
+    expect(d.tax).toBe(0);
+  });
+  it('is taxed as income when paid to the taxable account', () => {
+    const i = { ...inputs, plop: { ...inputs.plop, destination: 'taxable' } };
+    const p = computePension(i);
+    const d = plopToDestination(i, p);
+    expect(d.rollover).toBe(false);
+    expect(d.tax).toBeGreaterThan(p.plop.lumpSum * 0.1);
+    expect(d.net).toBeCloseTo(p.plop.lumpSum - d.tax, 6);
+  });
+  it('labels the Compare rows with where the money goes', () => {
+    const plop = comparisons(inputs, 10).find((c) => c.title === 'PLOP vs. no PLOP')!;
+    expect(plop.variants[1]!.label).toMatch(/457\(b\)/);
+    expect(plop.variants[1]!.note).toMatch(/Rolled into/);
+    expect(plop.variants[2]!.label).toMatch(/all-stock rollover/);
   });
 });

@@ -241,6 +241,9 @@ export function Toggle({ label, checked, onChange, hint }: { label: string; chec
   );
 }
 
+/** Long sentences wrap so tables fit on desktop; numbers and short labels stay on one line. */
+const isProse = (c: ReactNode) => typeof c === 'string' && c.length > 24 && /\s/.test(c);
+
 export function Table({ caption, head, rows }: { caption: string; head: string[]; rows: Array<Array<ReactNode>> }) {
   return (
     <div className="table-wrap" tabIndex={0} role="region" aria-label={caption}>
@@ -258,7 +261,17 @@ export function Table({ caption, head, rows }: { caption: string; head: string[]
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
-              {r.map((c, j) => (j === 0 ? <th key={j} scope="row">{c}</th> : <td key={j}>{c}</td>))}
+              {r.map((c, j) =>
+                j === 0 ? (
+                  <th key={j} scope="row" className={isProse(c) ? 'wrap' : undefined}>
+                    {c}
+                  </th>
+                ) : (
+                  <td key={j} className={isProse(c) ? 'wrap' : undefined}>
+                    {c}
+                  </td>
+                ),
+              )}
             </tr>
           ))}
         </tbody>

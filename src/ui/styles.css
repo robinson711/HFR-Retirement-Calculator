@@ -248,6 +248,13 @@ thead th {
 tbody tr:nth-child(even) { background: var(--surface-2); }
 tbody tr:hover { background: var(--accent-soft); }
 tbody th { font-weight: 600; }
+/* Keep desktop tables inside the card: headers and sentences wrap, numbers don't. */
+thead th { white-space: normal; vertical-align: bottom; min-width: 7ch; }
+th.wrap, td.wrap { white-space: normal; text-align: left; min-width: 14ch; max-width: 40ch; line-height: 1.4; }
+tbody th.wrap { min-width: 18ch; }
+@media (min-width: 601px) {
+  th, td { padding: 8px 10px; }
+}
 
 /* Charts */
 .chart { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 12px; box-shadow: var(--shadow); }
