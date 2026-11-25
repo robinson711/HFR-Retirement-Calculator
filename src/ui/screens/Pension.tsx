@@ -111,7 +111,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         <SelectField
           label="Where the lump sum goes"
           value={inputs.plop.destination ?? '457b'}
-          options={inputs.accounts.map((acc) => [acc.id, acc.label])}
+          options={inputs.accounts.filter((acc) => !acc.notHeld).map((acc) => [acc.id, acc.label])}
           onChange={(destination) => set((s) => ({ ...s, plop: { ...s.plop, destination } }))}
           hint="Rolling it into a retirement plan defers tax. Taken as cash, 20% is withheld for federal tax."
         />

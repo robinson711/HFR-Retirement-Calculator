@@ -1,7 +1,7 @@
 // Scenario model: turns the user's inputs into every result the screens show.
 // Pure functions only; the UI calls `computeScenario` and the comparison helpers.
 import schedule from '../data/salary-schedule.json';
-import { project, monteCarlo, sustainableSpending, type Account, type AccountKind, type Assumptions, type PlanInputs, type Projection, type MonteCarloResult } from './cashflow';
+import { heldAccounts, project, monteCarlo, sustainableSpending, type Account, type AccountKind, type Assumptions, type PlanInputs, type Projection, type MonteCarloResult } from './cashflow';
 import { deathBeforeRetirement } from './death';
 import { accumulatedContributions, averageFinalSalary, maximumMonthly, tierRules, type MaximumBenefit } from './pension';
 import { applyPlop, plopAmountForMonths, plopBreakEvenReturn, type PlopResult } from './plop';
@@ -397,7 +397,7 @@ export function planInputs(inputs: ScenarioInputs, pension: PensionResult, overr
     secondJob: inputs.secondJob.enabled ? { ...inputs.secondJob } : null,
     socialSecurity: resolveSocialSecurity(inputs, pension).benefits,
     expenses: inputs.expenses,
-    accounts: inputs.accounts,
+    accounts: heldAccounts(inputs.accounts),
     withdrawalOrder: inputs.withdrawalOrder,
     assumptions: inputs.assumptions,
     ...overrides,
