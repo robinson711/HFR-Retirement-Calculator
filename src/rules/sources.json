@@ -120,6 +120,26 @@
       "publisher": "Social Security Administration",
       "url": "https://www.ssa.gov/oact/quickcalc/early_late.html",
       "asOf": "2026-11-25"
+    },
+    "irs-n-25-67": {
+      "title": "Notice 2025-67: 2026 limitations for retirement plans",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/pub/irs-drop/n-25-67.pdf",
+      "asOf": "2026-11-25",
+      "note": "2027 figures from Notice 2026-66: https://www.irs.gov/pub/irs-drop/n-26-66.pdf"
+    },
+    "irs-457-catchup": {
+      "title": "Issue Snapshot: Section 457(b) plan catch-up contributions",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/retirement-plans/issue-snapshot-section-457b-plan-of-governmental-and-tax-exempt-employers-catch-up-contributions",
+      "asOf": "2026-11-25"
+    },
+    "mnretire-post-severance": {
+      "title": "About post-severance deferrals",
+      "publisher": "Minnesota State Retirement System",
+      "url": "https://employers.mnretire.gov/about-post-severance-deferrals",
+      "asOf": "2026-11-25",
+      "note": "Secondary source summarizing 26 CFR 1.415(c)-2(e)(3). Confirm with your deferred compensation plan."
     }
   }
 }

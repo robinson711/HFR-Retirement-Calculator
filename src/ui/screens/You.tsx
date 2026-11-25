@@ -17,7 +17,7 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
   const tier2 = inputs.member.tier === 'tier2';
   return (
     <div className="grid">
-      <Section title="About you">
+      <Section title="About you" who="you">
         <p className="lead">We only ask for month and year. Nothing you enter leaves this device.</p>
         <SelectField
           label="RSA tier"
@@ -54,7 +54,7 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
         />
       </Section>
 
-      <Section title="Pay">
+      <Section title="Pay" who="you">
         <p className="lead">
           From the FY{SCHEDULE.fiscalYear} public safety salary schedule, effective {SCHEDULE.effectiveDate}, plus the {pct(todayScale - 1, 0)} raise granted this year that the
           schedule file does not show yet.
@@ -83,7 +83,7 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
 
       <Promotions inputs={inputs} set={set} />
 
-      <Section title="Sick leave">
+      <Section title="Sick leave" who="you">
         <SelectField
           label="Work schedule"
           value={inputs.sickLeave.workSchedule}
@@ -111,7 +111,7 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
         {tier2 && <Note kind="warn">Tier II members cannot convert sick leave to service credit (ERS Handbook p.21).</Note>}
       </Section>
 
-      <Section title="Retirement">
+      <Section title="Retirement" who="you">
         <NumberField
           label="Target years of service"
           value={inputs.retirement.targetServiceYears}
@@ -196,7 +196,7 @@ function Promotions({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
   };
 
   return (
-    <Section title="Promotions">
+    <Section title="Promotions" who="you">
       <p className="lead">
         Personnel Manual 8.4(A): on promotion you move to the first step of the new grade that pays at least {pct(PROMOTION_RAISE_PER_GRADE, 0)} more for each grade you
         jump, or step 1 if that is higher. Your anniversary date stays the same, so you keep moving up one step a year (8.4(C)).

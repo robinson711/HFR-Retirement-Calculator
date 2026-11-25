@@ -8,6 +8,11 @@ function show(v: unknown): string {
   if (typeof v === 'number') return v < 1 && v > 0 ? `${+(v * 100).toFixed(4)}%` : v.toLocaleString();
   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
   if (typeof v === 'string') return v;
+  if (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).every((k) => /^\d{4}$/.test(k))) {
+    return Object.entries(v as Record<string, number>)
+      .map(([year, n]) => `${year}: ${n.toLocaleString()}`)
+      .join('; ');
+  }
   return 'See table in source';
 }
 

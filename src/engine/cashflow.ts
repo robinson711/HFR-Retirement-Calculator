@@ -74,6 +74,10 @@ export interface PlanInputs {
   plopLumpSum: number;
   plopDestination: string | null;
   sickLeaveCashAfterTax: number;
+  /** Annual, holiday and comp leave paid at retirement, after tax, today's dollars. */
+  leaveCashAfterTax?: number;
+  /** Part of that payout deferred into the traditional 457(b), today's dollars. */
+  leaveDeferral?: number;
   secondJob: SecondJob | null;
   socialSecurity: { member: SocialSecurity | null; spouse: SocialSecurity | null };
   expenses: {
@@ -170,6 +174,18 @@ export function project(plan: PlanInputs, draw: ReturnDraw = expectedReturns(pla
       if (taxable && plan.sickLeaveCashAfterTax > 0) {
         taxable.balance += plan.sickLeaveCashAfterTax;
         taxable.basis += plan.sickLeaveCashAfterTax;
+      }
+      const leaveCash = plan.leaveCashAfterTax ?? 0;
+      if (taxable && leaveCash > 0) {
+        taxable.balance += leaveCash;
+        taxable.basis += leaveCash;
+      }
+      const deferred = plan.leaveDeferral ?? 0;
+      const trad457 = accounts.find((x) => x.kind === '457b' && x.owner === 'member') ?? accounts.find((x) => x.kind === '457b');
+      if (deferred > 0 && trad457) trad457.balance += deferred;
+      else if (deferred > 0 && taxable) {
+        taxable.balance += deferred;
+        taxable.basis += deferred;
       }
     }
 

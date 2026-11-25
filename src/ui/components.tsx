@@ -1,10 +1,21 @@
 import { useId, useState, type ReactNode } from 'react';
 import type { YearMonth } from '../engine/service';
 
-export function Section({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
+export type Who = 'you' | 'spouse';
+
+/** A small text label so the You / Spouse color coding never relies on color alone. */
+export function WhoBadge({ who }: { who: Who }) {
+  return <span className={`who-badge who-${who}`}>{who === 'you' ? 'You' : 'Spouse'}</span>;
+}
+
+export function Section({ title, children, id, who }: { title: string; children: ReactNode; id?: string; who?: Who }) {
+  const hid = id ?? title.replace(/\W+/g, '-');
   return (
-    <section className="card" aria-labelledby={id ?? title.replace(/\W+/g, '-')}>
-      <h2 id={id ?? title.replace(/\W+/g, '-')}>{title}</h2>
+    <section className={`card${who ? ` who-${who}` : ''}`} aria-labelledby={hid}>
+      <h2 id={hid}>
+        {who && <WhoBadge who={who} />}
+        {title}
+      </h2>
       {children}
     </section>
   );
