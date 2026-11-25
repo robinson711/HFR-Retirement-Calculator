@@ -1,11 +1,11 @@
 import { useId, useState, type ReactNode } from 'react';
 import type { YearMonth } from '../engine/service';
 
-export type Who = 'you' | 'spouse';
+export type Who = 'you' | 'spouse' | 'beneficiary';
 
 /** A small text label so the You / Spouse color coding never relies on color alone. */
 export function WhoBadge({ who }: { who: Who }) {
-  return <span className={`who-badge who-${who}`}>{who === 'you' ? 'You' : 'Spouse'}</span>;
+  return <span className={`who-badge who-${who}`}>{who === 'you' ? 'You' : who === 'spouse' ? 'Spouse' : 'Beneficiary'}</span>;
 }
 
 export function Section({ title, children, id, who }: { title: string; children: ReactNode; id?: string; who?: Who }) {

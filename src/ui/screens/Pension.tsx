@@ -73,7 +73,7 @@ export function Pension({ inputs, result, set, onEditSchedule }: { inputs: Scena
         />
       </ShowMath>
 
-      <Section title="Survivor options" who="spouse">
+      <Section title="Survivor options" who="beneficiary">
         <p className="lead">
           Enter the amounts from your RSA estimate letter for exact figures. Without them, Options 1 to 3 are rough estimates scaled from one real RSA letter.
         </p>
@@ -275,7 +275,7 @@ export function Pension({ inputs, result, set, onEditSchedule }: { inputs: Scena
 
       <LeavePayout inputs={inputs} pension={p} set={set} onEditSchedule={onEditSchedule} />
 
-      <Section title="If you die before you can retire" who="spouse">
+      <Section title="If you die before you can retire" who="beneficiary">
         <p>
           Before retirement eligibility, your beneficiary gets your contributions plus interest and one year of salary, not a pension.
           {maxGap > 0 && (
@@ -287,7 +287,7 @@ export function Pension({ inputs, result, set, onEditSchedule }: { inputs: Scena
         </p>
         {deathElig && (
           <Note>
-            From <strong>{ym(deathElig.date)}</strong>, if you die while still working, your spouse could take a lifetime Option 2 benefit of about{' '}
+            From <strong>{ym(deathElig.date)}</strong>, if you die while still working, a spouse who is your only beneficiary could take a lifetime Option 2 benefit of about{' '}
             <strong>{monthly(deathElig.survivorMonthly)}</strong> a month (a rough estimate), figured like a normal retirement on that date.
             {deathElig.viaStressCredit && (
               <>
@@ -300,7 +300,7 @@ export function Pension({ inputs, result, set, onEditSchedule }: { inputs: Scena
         )}
         <Table
           caption="Death benefit by year"
-          head={['Year', 'Your age', 'Eligible?', 'Lump sum', 'Spouse pension', 'Gap to fill']}
+          head={['Year', 'Your age', 'Eligible?', 'Lump sum', 'Beneficiary pension', 'Gap to fill']}
           rows={death.map((d) => [String(d.year), String(d.age), d.eligible ? 'Yes' : 'No', k(d.lumpSum), d.survivorMonthly > 0 ? `${monthly(d.survivorMonthly)}/mo` : 'None', d.gap > 0 ? k(d.gap) : '—'])}
         />
         <Note>

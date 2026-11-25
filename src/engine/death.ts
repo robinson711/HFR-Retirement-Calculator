@@ -39,7 +39,7 @@ export function deathBeforeRetirement(inputs: DeathInputs): DeathScenario {
       eligible: true,
       lumpSum,
       survivorMonthly: inputs.maximumMonthlyAtDate * inputs.option2Factor,
-      explanation: 'Eligible to retire: a surviving spouse may choose an Option 2 lifetime benefit or the lump sum.',
+      explanation: 'Eligible to retire: a spouse who is your only beneficiary may choose an Option 2 lifetime benefit or the lump sum.',
     };
   }
   return {
