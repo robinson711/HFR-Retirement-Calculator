@@ -13,11 +13,14 @@ export function Compare({ inputs }: { inputs: ScenarioInputs }) {
   return (
     <div className="stack">
       <Note>
-        Sustainable spending is the most you could spend each year, in today&apos;s dollars, without running out of savings by your plan age. Every
-        comparison starts from your current plan, so the options often land within a few thousand dollars of each other. The difference column shows the
-        gap to the nearest $100.
+        Sustainable spending is the most you could spend each year, in today&apos;s dollars, without running out of savings by your plan age. Every comparison
+        starts from your current plan, so the options often land within a few thousand dollars of each other. The difference column shows the gap to the nearest
+        $100.
       </Note>
-      <Note>Each comparison changes one thing and keeps everything else the same. Success rates use 300 market paths per option, so they can differ slightly from the Plan screen.</Note>
+      <Note>
+        Each comparison changes one thing and keeps everything else the same. Success rates use 300 market paths per option, so they can differ slightly from
+        the Plan screen.
+      </Note>
       {list.map((c) => {
         const ranked = [...c.variants].sort((a, b) => b.sustainable - a.sustainable);
         const best = ranked[0]!;
@@ -41,7 +44,16 @@ export function Compare({ inputs }: { inputs: ScenarioInputs }) {
             </div>
             <Table
               caption={c.title}
-              head={['Option', 'Retire', 'Monthly pension', c.title === plopTitle ? 'Lump sum' : 'Note', 'Sustainable spending', `Difference vs. ${base.label}`, 'Success rate', 'Median left at end']}
+              head={[
+                'Option',
+                'Retire',
+                'Monthly pension',
+                c.title === plopTitle ? 'Lump sum' : 'Note',
+                'Sustainable spending',
+                `Difference vs. ${base.label}`,
+                'Success rate',
+                'Median left at end',
+              ]}
               rows={c.variants.map((v) => [
                 v.label,
                 ym(v.retirementDate),
@@ -53,6 +65,13 @@ export function Compare({ inputs }: { inputs: ScenarioInputs }) {
                 k(v.medianEnding),
               ])}
             />
+            {c.breakdown && (
+              <Table
+                caption={`Why ${c.breakdown.to} differs from ${c.breakdown.from}, in sustainable spending a year (today's dollars, nearest $100)`}
+                head={['Reason', 'Effect']}
+                rows={[...c.breakdown.lines.map((l) => [l.label, signed(l.amount)]), ['Total', signed(c.breakdown.lines.reduce((a, l) => a + l.amount, 0))]]}
+              />
+            )}
           </Section>
         );
       })}
