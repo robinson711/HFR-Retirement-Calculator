@@ -1,9 +1,9 @@
-import { deathByYear, inServiceDeathEligibility, plopCumulative, plopToDestination, type ScenarioInputs, type ScenarioResult } from '../../engine/model';
+import { deathByYear, inServiceDeathEligibility, plopCumulative, plopToDestination, PLOP_MORTGAGE, PLOP_PURCHASE, type ScenarioInputs, type ScenarioResult } from '../../engine/model';
 import { plopLimits } from '../../engine/plop';
 import { WORK_SCHEDULES, type WorkSchedule } from '../../engine/sickLeave';
 import { OPTION_LABELS, type SurvivorOption } from '../../engine/survivor';
 import { PlopChart, PurchasingPowerChart } from '../charts';
-import { Assumptions, KeyNumber, MonthYearField, MoneyField, Note, NumberField, Section, SelectField, ShowMath, Table, Toggle } from '../components';
+import { Assumptions, KeyNumber, MonthYearField, MoneyField, Note, NumberField, PercentField, Section, SelectField, ShowMath, Table, Toggle } from '../components';
 import { cents, dollars, k, monthly, pct, years, ym } from '../format';
 import { LeavePayout } from './LeavePayout';
 import type { Setter } from './You';
@@ -12,14 +12,17 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
   const p = result.pension;
   const a = inputs.assumptions;
   const sl = p.sickLeave;
-  const plopDest = plopToDestination(inputs, p);
-  const tier2 = inputs.member.tier === 'tier2';
+    const tier2 = inputs.member.tier === 'tier2';
   const limits = plopLimits(p.maximum.monthly);
   const death = deathByYear(inputs, p);
   const deathElig = inServiceDeathEligibility(inputs, p);
   const maxGap = Math.max(0, ...death.map((d) => d.gap));
   const stocks = a.returns.stocks.mean;
-  const plopCurve = plopCumulative(p, stocks, a.inflation, a.longevityAge);
+  const plopDest = plopToDestination(inputs, p);
+  const mortgageRate = inputs.expenses.mortgageRate ?? 0.04;
+  // Paying down the mortgage "earns" its interest rate; a purchase earns nothing.
+  const lumpReturn = plopDest.use === 'mortgage' ? mortgageRate : plopDest.use === 'purchase' ? 0 : stocks;
+  const plopCurve = plopCumulative(p, lumpReturn, a.inflation, a.longevityAge);
   const retireYear = p.retirementDate.year;
   const power = Array.from({ length: Math.max(1, a.longevityAge - Math.floor(p.ageAtRetirement) + 1) }, (_, i) => {
     const nominal = p.finalMonthly * Math.pow(1 + a.pensionCola, i);
@@ -114,14 +117,47 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         <SelectField
           label="Where the lump sum goes"
           value={inputs.plop.destination ?? '457b'}
-          options={inputs.accounts.filter((acc) => !acc.notHeld).map((acc) => [acc.id, acc.label])}
+          options={[
+            ...inputs.accounts.filter((acc) => !acc.notHeld).map((acc) => [acc.id, `Invest it: ${acc.label}`] as [string, string]),
+            [PLOP_MORTGAGE, 'Pay down the mortgage'],
+            [PLOP_PURCHASE, 'A large purchase (spend it)'],
+          ]}
           onChange={(destination) => set((s) => ({ ...s, plop: { ...s.plop, destination } }))}
-          hint="Rolling it into a retirement plan defers tax. Taken as cash, 20% is withheld for federal tax."
+          hint="Rolling it into a retirement plan defers tax. Anything else is paid to you and taxed as income that year (20% is withheld for federal tax)."
         />
+        {plopDest.use === 'mortgage' && (
+          <>
+            <PercentField
+              label="Mortgage interest rate"
+              value={mortgageRate}
+              step={0.125}
+              min={0}
+              onChange={(mortgageRate) => set((s) => ({ ...s, expenses: { ...s.expenses, mortgageRate } }))}
+              hint={`Uses your mortgage payment of ${dollars(inputs.expenses.mortgageAnnual)} a year and payoff year ${inputs.expenses.mortgagePayoffYear} from the Savings tab. Estimated balance when you retire: ${dollars(plopDest.mortgageBalance)}.`}
+            />
+            {plopDest.mortgageBalance <= 0 && <Note kind="warn">Your mortgage is paid off before you retire, so the whole lump sum goes to savings.</Note>}
+          </>
+        )}
+        {plopDest.use === 'purchase' && (
+          <MoneyField
+            label="Purchase amount (0 = all of it)"
+            value={inputs.plop.purchaseAmount ?? 0}
+            step={1000}
+            onChange={(purchaseAmount) => set((s) => ({ ...s, plop: { ...s.plop, purchaseAmount } }))}
+            hint={`In ${p.retirementDate.year} dollars. Anything left over goes to your taxable savings.`}
+          />
+        )}
         {p.plop.lumpSum > 0 && !plopDest.rollover && (
           <Note>
-            This account isn&apos;t a pre-tax retirement plan, so the lump sum is taxed as income in {p.retirementDate.year}: about {dollars(plopDest.tax)} in federal and
-            Alabama tax, leaving {dollars(plopDest.net)} to invest. Choose your traditional 457(b) or another pre-tax account to roll it over tax-free.
+            {plopDest.use === 'account' ? "This account isn't a pre-tax retirement plan, so the" : 'The'} lump sum is taxed as income in {p.retirementDate.year}: about{' '}
+            {dollars(plopDest.tax)} in federal and Alabama tax, leaving <strong>{dollars(plopDest.net)}</strong>.{' '}
+            {plopDest.use === 'mortgage'
+              ? plopDest.toMortgage >= plopDest.mortgageBalance - 0.5
+                ? `That pays off your ${dollars(plopDest.mortgageBalance)} mortgage, so its ${dollars(inputs.expenses.mortgageAnnual)} yearly payment stops${plopDest.leftover > 500 ? `, and ${dollars(plopDest.leftover)} is left for savings` : ''}.`
+                : `That pays ${dollars(plopDest.toMortgage)} of your ${dollars(plopDest.mortgageBalance)} balance. With the same payment, the mortgage is gone after ${plopDest.mortgagePayoffYear} instead of ${inputs.expenses.mortgagePayoffYear}.`
+              : plopDest.use === 'purchase'
+                ? `You spend ${dollars(plopDest.spent)}, and the app counts it as gone from your savings${plopDest.leftover > 500 ? `. The other ${dollars(plopDest.leftover)} goes to savings` : ''}.`
+                : 'Choose your traditional 457(b) or another pre-tax account to roll it over tax-free.'}
           </Note>
         )}
         <NumberField
@@ -138,8 +174,22 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
               A {dollars(p.plop.lumpSum)} lump sum lowers your pension by {cents(p.plop.monthlyReduction)} a month for life. To beat the pension it gives up by your
               life expectancy (about age {Math.round(p.ageAtRetirement + p.lifeExpectancyAtRetirement)}), it needs to earn about <strong>{pct(p.plopBreakEven)}</strong> a year.
             </p>
+            {plopDest.use === 'mortgage' && (
+              <p>
+                Paying down the mortgage &quot;earns&quot; its {pct(mortgageRate)} interest rate with no market risk.{' '}
+                {mortgageRate >= p.plopBreakEven
+                  ? 'That beats the break-even return, so the PLOP pays for itself.'
+                  : 'That is below the break-even return, so over a full lifetime the pension you give up is worth more than the interest you save. Paying off the mortgage still lowers your bills and risk in early retirement.'}
+              </p>
+            )}
+            {plopDest.use === 'purchase' && (
+              <p>
+                A purchase earns no return, so the PLOP never breaks even in dollars: you trade {cents(p.plop.monthlyReduction)} a month for life for the purchase now.
+                The chart shows how much pension you give up over time.
+              </p>
+            )}
             <PlopChart data={plopCurve} />
-            <Assumptions items={[['Lump sum return', `${pct(stocks)} a year (stock return assumption)`], ['Inflation', pct(a.inflation)], ['Life expectancy', 'Rough population estimate, not RSA tables']]} />
+            <Assumptions items={[['Lump sum return', plopDest.use === 'mortgage' ? `${pct(mortgageRate)} a year (mortgage rate)` : plopDest.use === 'purchase' ? 'None (spent)' : `${pct(stocks)} a year (stock return assumption)`], ['Inflation', pct(a.inflation)], ['Life expectancy', 'Rough population estimate, not RSA tables']]} />
           </>
         ) : (
           <p className="hint">Choose a number of months to see the break-even return and the cumulative difference.</p>
