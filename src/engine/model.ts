@@ -885,11 +885,11 @@ export interface SurvivorRow {
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const OPTION_EXPLAIN: Record<SurvivorOption, string> = {
-  maximum: 'Your pension stops. Your spouse gets nothing more from RSA.',
-  option1: 'Your pension stops. Your spouse gets whatever is left of your annuity savings, once.',
-  option2: 'Your spouse keeps getting your same monthly pension for life.',
-  option3: 'Your spouse gets half of your monthly pension for life.',
-  option4: 'Your spouse gets the amount set in your custom option.',
+  maximum: 'Your pension stops. Your beneficiary gets nothing more from RSA.',
+  option1: 'Your pension stops. Your beneficiary gets whatever is left of your annuity savings, once.',
+  option2: 'Your beneficiary keeps getting your same monthly pension for life.',
+  option3: 'Your beneficiary gets half of your monthly pension for life.',
+  option4: 'Your beneficiary gets the amount set in your custom option.',
 };
 
 export function survivorView(inputs: ScenarioInputs, pension: PensionResult, death: DeathRow[]): SurvivorRow[] {
@@ -901,7 +901,7 @@ export function survivorView(inputs: ScenarioInputs, pension: PensionResult, dea
     rows.push({
       scenario: `You die while still working, before you could retire (e.g. ${firstPre.year})`,
       option: 'maximum',
-      explain: 'No pension. Your spouse gets your contributions plus interest and one year of your salary, once.',
+      explain: 'No pension. Your beneficiary gets your contributions plus interest and one year of your salary, once.',
       pensionMonthly: 0,
       lumpSum: firstPre.lumpSum,
       socialSecurityMonthly: widowSS,
@@ -912,7 +912,7 @@ export function survivorView(inputs: ScenarioInputs, pension: PensionResult, dea
     rows.push({
       scenario: `You die while still working, after ${MONTH_NAMES[inService.date.month - 1]} ${inService.date.year} (stress credit counts)`,
       option: 'option2',
-      explain: 'Your spouse can take a lifetime Option 2 pension as if you had retired that day, or the one-time payment instead.',
+      explain: 'A spouse who is your only beneficiary can take a lifetime Option 2 pension as if you had retired that day, or the one-time payment instead.',
       pensionMonthly: inService.survivorMonthly,
       lumpSum: 0,
       socialSecurityMonthly: widowSS,

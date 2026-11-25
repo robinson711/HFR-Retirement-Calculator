@@ -9,11 +9,11 @@ export function Survivors({ inputs, result }: { inputs: ScenarioInputs; result: 
   const rows = survivorView(inputs, p, death);
   const chosen = p.options.find((o) => o.option === inputs.survivor.option);
   return (
-    <Section title="If you die first: what your spouse receives" who="spouse">
+    <Section title="If you die first: what your beneficiary receives" who="beneficiary">
       <div className="stack">
         <div className="keys">
           <KeyNumber
-            label="Spouse pension under your choice"
+            label="Beneficiary pension under your choice"
             value={chosen && chosen.survivorMonthly > 0 ? monthly(p.survivorMonthly) : '$0'}
             sub={`${OPTION_LABELS[inputs.survivor.option]}, per month for life`}
           />
@@ -29,19 +29,19 @@ export function Survivors({ inputs, result }: { inputs: ScenarioInputs; result: 
           benefits, a simplified survivor estimate. A surviving spouse can usually start it at 60.
         </Note>
         <p>
-          Each row below is a case where <strong>you, the firefighter, die first</strong> and your spouse survives you. It shows what your spouse would receive
-          each month from RSA, any one-time payment, and Social Security. For deaths after retirement, what your spouse gets depends on the RSA option you pick
-          when you retire, so each option has its own row.
+          Each row below is a case where <strong>you, the firefighter, die first</strong>. It shows what your RSA beneficiary would receive each month, any
+          one-time payment, and, if your beneficiary is your spouse, Social Security. For deaths after retirement, what your beneficiary gets depends on the RSA
+          option you pick when you retire, so each option has its own row. Your beneficiary is usually your spouse, but it doesn&apos;t have to be.
         </p>
         <Table
-          caption="What your spouse receives if you die first (today's dollars)"
+          caption="What your beneficiary receives if you die first (today's dollars)"
           head={[
             'If you die',
             'Your RSA option',
-            'What your spouse gets',
-            'RSA pension to spouse per month',
-            'One-time payment to spouse',
-            'Spouse Social Security per month',
+            'What your beneficiary gets',
+            'RSA pension to beneficiary per month',
+            'One-time payment to beneficiary',
+            'Spouse Social Security per month (spouse only)',
           ]}
           rows={rows.map((r) => [
             r.scenario,

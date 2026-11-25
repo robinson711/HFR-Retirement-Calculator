@@ -318,7 +318,7 @@ tbody th.wrap { min-width: 18ch; }
 
 /* You / Spouse color coding. Always paired with a text badge, never color alone. */
 .card.who-you { border-top: 4px solid var(--you); }
-.card.who-spouse { border-top: 4px solid var(--spouse); }
+.card.who-spouse, .card.who-beneficiary { border-top: 4px solid var(--spouse); }
 fieldset.who-you { border-left: 4px solid var(--you); }
 fieldset.who-spouse { border-left: 4px solid var(--spouse); }
 .card h2 .who-badge, legend .who-badge { margin-right: 8px; vertical-align: 2px; }
@@ -327,7 +327,7 @@ fieldset.who-spouse { border-left: 4px solid var(--spouse); }
   padding: 2px 8px; border-radius: 999px;
 }
 .who-badge.who-you { color: var(--you); background: var(--you-bg); }
-.who-badge.who-spouse { color: var(--spouse); background: var(--spouse-bg); }
+.who-badge.who-spouse, .who-badge.who-beneficiary { color: var(--spouse); background: var(--spouse-bg); }
 
 /* Numbered walkthrough steps. */
 ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 12px 0; }
