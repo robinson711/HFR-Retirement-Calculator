@@ -1,7 +1,7 @@
 import { SCHEDULE, type ScenarioInputs } from '../../engine/model';
 import { basePay, gradeOrder, PROMOTION_RAISE_PER_GRADE, salaryPath, type Promotion } from '../../engine/salary';
 import { fiscalYearOf } from '../../engine/service';
-import { SHIFT_ACCRUAL_HOURS_PER_YEAR } from '../../engine/sickLeave';
+import { WORK_SCHEDULES, type WorkSchedule } from '../../engine/sickLeave';
 import { MonthYearField, MoneyField, Note, NumberField, PercentField, Section, SelectField, Toggle } from '../components';
 import { dollars, pct } from '../format';
 
@@ -84,25 +84,19 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
       <Promotions inputs={inputs} set={set} />
 
       <Section title="Sick leave">
-        <NumberField label="Current balance (shift hours)" value={inputs.sickLeave.balanceHours} min={0} step={1} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, balanceHours: v } }))} />
-        <NumberField
-          label="Accrual per year (shift hours)"
-          value={Math.round(inputs.sickLeave.accrualHoursPerYear * 10) / 10}
-          min={0}
-          step={0.1}
-          suffix="hours"
-          onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, accrualHoursPerYear: v } }))}
-          hint={`Default ${SHIFT_ACCRUAL_HOURS_PER_YEAR.toFixed(1)} hours: 4 hours per pay period, scaled for a 2,912-hour year (Personnel Manual 10.7(D)). No cap.`}
+        <SelectField
+          label="Work schedule"
+          value={inputs.sickLeave.workSchedule}
+          options={Object.entries(WORK_SCHEDULES).map(([k, v]) => [k as WorkSchedule, v.label])}
+          onChange={(workSchedule) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, workSchedule } }))}
+          hint={
+            inputs.sickLeave.workSchedule === 'fireSuppression'
+              ? 'Accrues 145.6 hours a year: 4 hours per pay period, scaled for a 2,912-hour year. 11.2 hours count as one 8-hour day (Personnel Manual 10.7(D)). No cap.'
+              : 'Accrues 104 hours a year: 4 hours per pay period. 8 hours make one day (Personnel Manual 10.7(D)). No cap.'
+          }
         />
+        <NumberField label="Current balance" value={inputs.sickLeave.balanceHours} min={0} step={1} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, balanceHours: v } }))} />
         <NumberField label="Hours used per year" value={inputs.sickLeave.usedHoursPerYear} min={0} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, usedHoursPerYear: v } }))} />
-        <NumberField
-          label="Hours per sick leave day"
-          value={inputs.sickLeave.hoursPerDay}
-          min={1}
-          step={0.1}
-          onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, hoursPerDay: v } }))}
-          hint="11.2 fire suppression hours count as one 8-hour day."
-        />
         <SelectField
           label="At retirement"
           value={inputs.sickLeave.choice}

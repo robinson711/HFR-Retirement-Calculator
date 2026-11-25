@@ -20,7 +20,7 @@ import {
   type Tier,
   type YearMonth,
 } from './service';
-import { compareSickLeave, SHIFT_ACCRUAL_HOURS_PER_YEAR, type SickLeaveComparison } from './sickLeave';
+import { compareSickLeave, WORK_SCHEDULES, type SickLeaveComparison, type WorkSchedule } from './sickLeave';
 import { DEFAULT_MORTALITY, estimatedFactors, lifeAnnuity, lifeExpectancy, optionAmounts, type OptionAmount, type SurvivorOption } from './survivor';
 import { claimingFactor, estimatePia, fullRetirementAgeMonths, type PiaEstimate } from './socialSecurity';
 import { computeTax, type FilingStatus } from './tax';
@@ -75,9 +75,9 @@ export interface ScenarioInputs {
   };
   sickLeave: {
     balanceHours: number;
-    accrualHoursPerYear: number;
+    /** Fire suppression or 40-hour schedule; sets the accrual rate and the hours in a sick leave day. */
+    workSchedule: WorkSchedule;
     usedHoursPerYear: number;
-    hoursPerDay: number;
     choice: 'cash' | 'credit';
     cashPct: number;
   };
@@ -127,9 +127,8 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
     },
     sickLeave: {
       balanceHours: 800,
-      accrualHoursPerYear: SHIFT_ACCRUAL_HOURS_PER_YEAR,
+      workSchedule: 'fireSuppression',
       usedHoursPerYear: 0,
-      hoursPerDay: 11.2,
       choice: 'cash',
       cashPct: 0.5,
     },
@@ -190,12 +189,12 @@ const ageYears = (birth: YearMonth, date: YearMonth) => monthsBetween(birth, dat
 
 function sickHoursAt(inputs: ScenarioInputs, date: YearMonth): number {
   const years = Math.max(0, monthsBetween(inputs.today, date) / 12);
-  return Math.max(0, inputs.sickLeave.balanceHours + (inputs.sickLeave.accrualHoursPerYear - inputs.sickLeave.usedHoursPerYear) * years);
+  return Math.max(0, inputs.sickLeave.balanceHours + (WORK_SCHEDULES[inputs.sickLeave.workSchedule].accrualHoursPerYear - inputs.sickLeave.usedHoursPerYear) * years);
 }
 
 function sickCreditAt(inputs: ScenarioInputs, date: YearMonth): number {
   if (inputs.sickLeave.choice !== 'credit' || inputs.member.tier === 'tier2') return 0;
-  return sickLeaveCreditMonths(shiftHoursToDays(sickHoursAt(inputs, date), inputs.sickLeave.hoursPerDay));
+  return sickLeaveCreditMonths(shiftHoursToDays(sickHoursAt(inputs, date), WORK_SCHEDULES[inputs.sickLeave.workSchedule].hoursPerDay));
 }
 
 /** Retirement date: the override, or the first month with the target service that is also eligible. */
@@ -281,8 +280,8 @@ export function computePension(inputs: ScenarioInputs, dateOverride?: YearMonth)
   const marginal = (bumped.total - tax.total) / 10000;
   const sickLeave = compareSickLeave({
     hours: sickHours,
-    hoursPerDay: inputs.sickLeave.hoursPerDay,
-    hourlyRate: lastBase / SCHEDULE.hoursPerYearFireSuppression,
+    hoursPerDay: WORK_SCHEDULES[inputs.sickLeave.workSchedule].hoursPerDay,
+    hourlyRate: lastBase / WORK_SCHEDULES[inputs.sickLeave.workSchedule].hoursPerYear,
     cashPct: inputs.sickLeave.cashPct,
     marginalTaxRate: marginal,
     afs,

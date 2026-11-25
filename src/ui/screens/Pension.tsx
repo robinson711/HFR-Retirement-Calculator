@@ -1,5 +1,6 @@
 import { deathByYear, inServiceDeathEligibility, plopCumulative, type ScenarioInputs, type ScenarioResult } from '../../engine/model';
 import { plopLimits } from '../../engine/plop';
+import { WORK_SCHEDULES } from '../../engine/sickLeave';
 import { OPTION_LABELS, type SurvivorOption } from '../../engine/survivor';
 import { PlopChart, PurchasingPowerChart } from '../charts';
 import { Assumptions, KeyNumber, MonthYearField, MoneyField, Note, NumberField, Section, SelectField, ShowMath, Table, Toggle } from '../components';
@@ -147,7 +148,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         </p>
         <ShowMath>
           <pre className="formula">
-            {`${Math.round(sl.hours)} hours ÷ ${inputs.sickLeave.hoursPerDay} = ${sl.days.toFixed(1)} days → ${sl.creditMonths} months on RSA's chart\n`}
+            {`${Math.round(sl.hours)} hours ÷ ${WORK_SCHEDULES[inputs.sickLeave.workSchedule].hoursPerDay} = ${sl.days.toFixed(1)} days → ${sl.creditMonths} months on RSA's chart\n`}
             {`Credit: ${dollars(p.maximum.afs)} × ${(sl.creditMonths / 12).toFixed(3)} × ${p.maximum.factor} ÷ 12 = ${cents(sl.pensionIncreaseMonthly)} a month\n`}
             {`Cash: ${Math.round(sl.hours)} hours × hourly rate × 50% = ${dollars(sl.cashGross)}, ${dollars(sl.cashAfterTax)} after tax`}
           </pre>
