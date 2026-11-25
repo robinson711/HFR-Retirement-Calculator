@@ -1,7 +1,6 @@
 import { SCHEDULE, type ScenarioInputs } from '../../engine/model';
 import { basePay, gradeOrder, PROMOTION_RAISE_PER_GRADE, salaryPath, type Promotion } from '../../engine/salary';
 import { fiscalYearOf } from '../../engine/service';
-import { WORK_SCHEDULES, type WorkSchedule } from '../../engine/sickLeave';
 import { MonthYearField, MoneyField, Note, NumberField, PercentField, Section, SelectField, Toggle } from '../components';
 import { dollars, pct } from '../format';
 
@@ -82,34 +81,6 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
       </Section>
 
       <Promotions inputs={inputs} set={set} />
-
-      <Section title="Sick leave" who="you">
-        <SelectField
-          label="Work schedule"
-          value={inputs.sickLeave.workSchedule}
-          options={Object.entries(WORK_SCHEDULES).map(([k, v]) => [k as WorkSchedule, v.label])}
-          onChange={(workSchedule) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, workSchedule } }))}
-          hint={
-            inputs.sickLeave.workSchedule === 'fireSuppression'
-              ? 'Accrues 145.6 hours a year: 4 hours per pay period, scaled for a 2,912-hour year. 11.2 hours count as one 8-hour day (Personnel Manual 10.7(D)). No cap.'
-              : 'Accrues 104 hours a year: 4 hours per pay period. 8 hours make one day (Personnel Manual 10.7(D)). No cap.'
-          }
-        />
-        <NumberField label="Current balance" value={inputs.sickLeave.balanceHours} min={0} step={1} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, balanceHours: v } }))} />
-        <NumberField label="Hours used per year" value={inputs.sickLeave.usedHoursPerYear} min={0} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, usedHoursPerYear: v } }))} />
-        <SelectField
-          label="At retirement"
-          value={inputs.sickLeave.choice}
-          options={[
-            ['cash', 'Take 50% as cash'],
-            ['credit', 'Convert to service credit'],
-          ]}
-          onChange={(choice) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, choice } }))}
-          hint="One or the other, not both (Personnel Manual 10.7(H))."
-        />
-        <p className="hint">Sick leave credit is capped at 36 months (730 days), the top of RSA's conversion chart.</p>
-        {tier2 && <Note kind="warn">Tier II members cannot convert sick leave to service credit (ERS Handbook p.21).</Note>}
-      </Section>
 
       <Section title="Retirement" who="you">
         <NumberField

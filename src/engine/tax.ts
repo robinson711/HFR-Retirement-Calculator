@@ -27,6 +27,11 @@ export interface TaxInput {
   capitalGains: number;
   /** 10% additional tax base (early IRA/TSP withdrawals not covered by an exception). */
   earlyWithdrawalPenaltyBase: number;
+  /**
+   * Retired public safety officer premium exclusion (IRC 402(l)), already capped by the caller at the lesser of
+   * $3,000 or premiums. Federal only; it can't exceed the pension and 457(b)/pre-tax income it comes out of.
+   */
+  psoExclusion?: number;
 }
 
 export interface TaxResult {
@@ -85,9 +90,10 @@ export function federalDeduction(filing: FilingStatus, over65Count: number, cale
 export function computeTax(input: TaxInput): TaxResult {
   const { filing } = input;
   // Federal
-  const otherForSS = input.pension + input.wages + input.pretaxWithdrawals + input.capitalGains;
+  const pso = Math.min(Math.max(0, input.psoExclusion ?? 0), input.pension + input.pretaxWithdrawals);
+  const otherForSS = input.pension + input.wages + input.pretaxWithdrawals - pso + input.capitalGains;
   const taxableSS = taxableSocialSecurity(filing, otherForSS, input.socialSecurity);
-  const ordinaryGross = input.pension + input.wages + input.pretaxWithdrawals + taxableSS;
+  const ordinaryGross = input.pension + input.wages + input.pretaxWithdrawals - pso + taxableSS;
   const magi = ordinaryGross + input.capitalGains;
   const deduction = federalDeduction(filing, input.over65Count, input.calendarYear, magi);
   const ordinaryTaxable = Math.max(0, ordinaryGross - deduction);

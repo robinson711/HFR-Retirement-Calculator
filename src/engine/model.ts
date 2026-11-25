@@ -122,6 +122,8 @@ export interface ScenarioInputs {
   accounts: Account[];
   withdrawalOrder: AccountKind[];
   secondJob: { enabled: boolean; annual: number; endAge: number; rsaEmployer: boolean; fullTime: boolean };
+  /** Retired public safety officer exclusion of up to $3,000 a year of health or long-term care premiums (IRC 402(l)). */
+  psoPremiumExclusion: boolean;
   socialSecurity: {
     /** Whether the City job withholds Social Security (OASDI) tax. */
     cityJobCovered: boolean;
@@ -207,6 +209,7 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
     ],
     withdrawalOrder: ['taxable', '457b', 'pretax', 'roth457', 'roth'],
     secondJob: { enabled: false, annual: 40000, endAge: 62, rsaEmployer: false, fullTime: true },
+    psoPremiumExclusion: true,
     socialSecurity: {
       cityJobCovered: true,
       member: { include: true, claimAge: 67, source: 'estimate', fraMonthly: 0, pastYears: 12, pastAverage: 55000, currentEarnings: 0, stopAge: 62 },
@@ -501,6 +504,7 @@ export function planInputs(inputs: ScenarioInputs, pension: PensionResult, overr
     leaveCashAfterTax: leave.chosen.netCash * toToday,
     leaveDeferral: leave.chosen.deferred * toToday,
     secondJob: inputs.secondJob.enabled ? { ...inputs.secondJob } : null,
+    psoPremiumExclusion: inputs.psoPremiumExclusion,
     socialSecurity: resolveSocialSecurity(inputs, pension).benefits,
     expenses: inputs.expenses,
     accounts: heldAccounts(inputs.accounts),
@@ -605,6 +609,21 @@ export function computeLeave(inputs: ScenarioInputs, pension: PensionResult): Le
     withDeferral,
     chosen: inputs.leave.defer ? withDeferral : without,
   };
+}
+
+/** Federal tax the public safety officer premium exclusion saves, today's dollars, over the retirement years it applies. */
+export function psoSavings(plan: PlanInputs): { years: number; perYear: number; total: number } {
+  const on = project({ ...plan, psoPremiumExclusion: true }).rows;
+  const off = project({ ...plan, psoPremiumExclusion: false }).rows;
+  let total = 0;
+  let years = 0;
+  on.forEach((r, i) => {
+    if (r.psoExcluded > 0) {
+      years++;
+      total += off[i]!.taxes - r.taxes;
+    }
+  });
+  return { years, perYear: years ? total / years : 0, total };
 }
 
 export function computeScenario(inputs: ScenarioInputs, paths = inputs.monteCarloPaths): ScenarioResult {

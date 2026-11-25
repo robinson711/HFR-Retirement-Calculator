@@ -1,5 +1,14 @@
 import type { Account, AccountKind } from '../../engine/cashflow';
-import { PRESETS, resolveSocialSecurity, type PresetName, type ScenarioInputs, type ScenarioResult, type SsDetail, type SsPerson } from '../../engine/model';
+import {
+  PRESETS,
+  psoSavings,
+  resolveSocialSecurity,
+  type PresetName,
+  type ScenarioInputs,
+  type ScenarioResult,
+  type SsDetail,
+  type SsPerson,
+} from '../../engine/model';
 import { MoneyField, Note, NumberField, PercentField, Section, SelectField, ShowMath, Toggle, WhoBadge } from '../components';
 import { dollars, k, monthly } from '../format';
 import type { Setter } from './You';
@@ -186,6 +195,7 @@ export function Savings({ inputs, result, set, onPreset }: { inputs: ScenarioInp
           onChange={(healthPost65) => set((s) => ({ ...s, expenses: { ...s.expenses, healthPost65 } }))}
         />
         <Note>Include retiree and surviving-spouse coverage. Confirm premiums and eligibility with the City of Huntsville benefits office.</Note>
+        <PsoExclusion inputs={inputs} result={result} set={set} />
         <MoneyField
           label="Mortgage payment per year"
           value={inputs.expenses.mortgageAnnual}
@@ -427,5 +437,27 @@ function SocialSecurityPerson({ who, person, detail, set }: { who: 'member' | 's
         </>
       )}
     </fieldset>
+  );
+}
+
+/** IRC 402(l): a retired public safety officer can exclude up to $3,000 a year of health or long-term care premiums. */
+function PsoExclusion({ inputs, result, set }: { inputs: ScenarioInputs; result: ScenarioResult; set: Setter }) {
+  const saved = inputs.psoPremiumExclusion ? psoSavings(result.plan) : null;
+  return (
+    <>
+      <Toggle
+        label="Use the public safety officer premium exclusion"
+        checked={inputs.psoPremiumExclusion}
+        onChange={(psoPremiumExclusion) => set((s) => ({ ...s, psoPremiumExclusion }))}
+        hint="As a firefighter retired at normal retirement age or for disability, you can leave up to $3,000 a year of health or long-term care premiums (for you, your spouse or dependents) out of your federal taxable income. It comes out of your RSA pension or City 457(b), and the plan no longer has to pay the insurer directly. When you file, check the PSO box on Form 1040 line 5c."
+      />
+      {saved && saved.years > 0 && (
+        <Note>
+          This saves about {dollars(Math.round(saved.perYear / 10) * 10)} a year in federal income tax for {saved.years} years, or about {k(saved.total)} in all
+          (today&apos;s dollars). The $3,000 isn&apos;t indexed, so it is worth less each year. It stops if you die first, because only the retired officer can
+          use it. The app assumes at least $3,000 of your healthcare cost is premiums. Alabama tax is not changed, since RSA pensions are already exempt there.
+        </Note>
+      )}
+    </>
   );
 }

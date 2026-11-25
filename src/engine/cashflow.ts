@@ -8,6 +8,7 @@
 //  - From the retirement year on, income (pension, second job, Social Security) pays spending first, then
 //    withdrawals cover the rest plus taxes, in the chosen account order. Extra income goes to the taxable account.
 import { normal, mulberry32 } from './random';
+import { ruleValue } from './rules';
 import { computeTax, type FilingStatus } from './tax';
 
 /** 457b = traditional (pre-tax) 457(b); roth457 = Roth 457(b), taxed like a Roth. */
@@ -79,6 +80,8 @@ export interface PlanInputs {
   /** Part of that payout deferred into the traditional 457(b), today's dollars. */
   leaveDeferral?: number;
   secondJob: SecondJob | null;
+  /** Use the retired public safety officer exclusion (IRC 402(l)) on health premiums while the member is alive. */
+  psoPremiumExclusion?: boolean;
   socialSecurity: { member: SocialSecurity | null; spouse: SocialSecurity | null };
   expenses: {
     core: number;
@@ -103,6 +106,8 @@ export interface YearRow {
   socialSecurity: number;
   withdrawals: Record<AccountKind, number>;
   taxes: number;
+  /** Premiums excluded from federal income under the public safety officer rule, today's dollars. */
+  psoExcluded: number;
   spending: number;
   core: number;
   healthcare: number;
@@ -155,6 +160,9 @@ export function project(plan: PlanInputs, draw: ReturnDraw = expectedReturns(pla
   let depletedYear: number | null = null;
   const core = coreOverride ?? plan.expenses.core;
   const pensionRealFactor = (1 + a.pensionCola) / (1 + a.inflation);
+  const psoLimit = ruleValue<number>('tax:federal.psoPremiumExclusion');
+  // Today's dollars are the dollars of the year before the plan starts.
+  const psoBaseYear = plan.startYear - 1;
 
   for (let year = plan.startYear; year <= endYear; year++) {
     const memberAge = year - plan.memberBirthYear;
@@ -230,6 +238,9 @@ export function project(plan: PlanInputs, draw: ReturnDraw = expectedReturns(pla
 
     const withdrawals = zeroByKind();
     let taxes = 0;
+    // The $3,000 is fixed in law (not indexed), so it shrinks in today's dollars. Health spending stands in for premiums.
+    const psoCap = plan.psoPremiumExclusion && retired && memberAlive ? Math.min(psoLimit / Math.pow(1 + a.inflation, year - psoBaseYear), healthcare) : 0;
+    let psoExcluded = 0;
     let shortfall = 0;
     if (retired) {
       const over65Count = (memberAlive && memberAge >= 65 ? 1 : 0) + (spouseAge !== null && spouseAge >= 65 ? 1 : 0);
@@ -267,7 +278,10 @@ export function project(plan: PlanInputs, draw: ReturnDraw = expectedReturns(pla
           socialSecurity: ss,
           capitalGains: gains,
           earlyWithdrawalPenaltyBase: penaltyBase,
+          // Only the RSA pension and the City 457(b) come from the plans of the employer you retired from.
+          psoExclusion: Math.min(psoCap, pension + take['457b']),
         });
+        psoExcluded = Math.min(psoCap, pension + take['457b']);
         if (Math.abs(t.total - tax) < 0.5) {
           tax = t.total;
           break;
@@ -313,6 +327,7 @@ export function project(plan: PlanInputs, draw: ReturnDraw = expectedReturns(pla
       socialSecurity: ss,
       withdrawals,
       taxes,
+      psoExcluded,
       spending,
       core: coreSpend,
       healthcare,

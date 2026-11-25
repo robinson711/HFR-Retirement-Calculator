@@ -129,6 +129,14 @@
       "source": "al-form40-2024",
       "citation": "Form 40 Booklet (2024), p.7 and line 3",
       "status": "verified"
+    },
+    "federal.psoPremiumExclusion": {
+      "label": "Retired public safety officer exclusion for health and long-term care premiums",
+      "value": 3000,
+      "unit": "dollars a year, not indexed: the lesser of $3,000 or the premiums paid, for you, your spouse or dependents. Only for a firefighter or other public safety officer retired at normal retirement age or for disability, and only on otherwise-taxable distributions from the governmental plan of the employer you retired from (RSA pension, 457(b)). Direct payment to the insurer is no longer required for distributions after December 29, 2022 (SECURE 2.0). Federal only; excluded premiums cannot also be deducted as medical expenses",
+      "source": "irs-pub-575",
+      "citation": "IRC 402(l); IRS Publication 575, Insurance Premiums for Retired Public Safety Officers",
+      "status": "verified"
     }
   }
 }

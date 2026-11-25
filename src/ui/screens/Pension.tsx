@@ -1,6 +1,6 @@
 import { deathByYear, inServiceDeathEligibility, plopCumulative, type ScenarioInputs, type ScenarioResult } from '../../engine/model';
 import { plopLimits } from '../../engine/plop';
-import { WORK_SCHEDULES } from '../../engine/sickLeave';
+import { WORK_SCHEDULES, type WorkSchedule } from '../../engine/sickLeave';
 import { OPTION_LABELS, type SurvivorOption } from '../../engine/survivor';
 import { PlopChart, PurchasingPowerChart } from '../charts';
 import { Assumptions, KeyNumber, MonthYearField, MoneyField, Note, NumberField, Section, SelectField, ShowMath, Table, Toggle } from '../components';
@@ -12,6 +12,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
   const p = result.pension;
   const a = inputs.assumptions;
   const sl = p.sickLeave;
+  const tier2 = inputs.member.tier === 'tier2';
   const limits = plopLimits(p.maximum.monthly);
   const death = deathByYear(inputs, p);
   const deathElig = inServiceDeathEligibility(inputs, p);
@@ -138,7 +139,33 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         )}
       </Section>
 
-      <Section title="Sick leave: cash or credit" who="you">
+      <Section title="Sick leave" who="you">
+        <SelectField
+          label="Work schedule"
+          value={inputs.sickLeave.workSchedule}
+          options={Object.entries(WORK_SCHEDULES).map(([k, v]) => [k as WorkSchedule, v.label])}
+          onChange={(workSchedule) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, workSchedule } }))}
+          hint={
+            inputs.sickLeave.workSchedule === 'fireSuppression'
+              ? 'Accrues 145.6 hours a year: 4 hours per pay period, scaled for a 2,912-hour year. 11.2 hours count as one 8-hour day (Personnel Manual 10.7(D)). No cap.'
+              : 'Accrues 104 hours a year: 4 hours per pay period. 8 hours make one day (Personnel Manual 10.7(D)). No cap.'
+          }
+        />
+        <NumberField label="Current balance" value={inputs.sickLeave.balanceHours} min={0} step={1} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, balanceHours: v } }))} />
+        <NumberField label="Hours used per year" value={inputs.sickLeave.usedHoursPerYear} min={0} suffix="hours" onChange={(v) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, usedHoursPerYear: v } }))} />
+        <SelectField
+          label="At retirement"
+          value={inputs.sickLeave.choice}
+          options={[
+            ['cash', 'Take 50% as cash'],
+            ['credit', 'Convert to service credit'],
+          ]}
+          onChange={(choice) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, choice } }))}
+          hint="One or the other, not both (Personnel Manual 10.7(H))."
+        />
+        <p className="hint">Sick leave credit is capped at 36 months (730 days), the top of RSA's conversion chart.</p>
+        {tier2 && <Note kind="warn">Tier II members cannot convert sick leave to service credit (ERS Handbook p.21).</Note>}
+        <h3>Cash or credit</h3>
         <div className="keys">
           <KeyNumber label="Cash after tax" value={k(sl.cashAfterTax)} sub={`50% of ${Math.round(sl.hours)} hours, about ${pct(1 - sl.cashAfterTax / Math.max(1, sl.cashGross), 0)} tax`} />
           <KeyNumber label="Credit: lifetime value" value={k(sl.pensionIncreaseValue)} sub={`${sl.creditMonths} months of credit = ${monthly(sl.pensionIncreaseMonthly)} more a month`} />

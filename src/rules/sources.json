@@ -140,6 +140,13 @@
       "url": "https://employers.mnretire.gov/about-post-severance-deferrals",
       "asOf": "2026-11-25",
       "note": "Secondary source summarizing 26 CFR 1.415(c)-2(e)(3). Confirm with your deferred compensation plan."
+    },
+    "irs-pub-575": {
+      "title": "Publication 575 (2025), Pension and Annuity Income",
+      "publisher": "Internal Revenue Service",
+      "url": "https://www.irs.gov/publications/p575",
+      "asOf": "2026-11-25",
+      "note": "The 2026 draft (Oct 2, 2026) keeps the same $3,000 rule."
     }
   }
 }
