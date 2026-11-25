@@ -48,13 +48,13 @@ export function Assumptions({ items }: { items: Array<[string, ReactNode]> }) {
   );
 }
 
-export function ShowMath({ children }: { children: ReactNode }) {
+export function ShowMath({ children, label }: { children: ReactNode; label?: string }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   return (
     <div className="math">
       <button type="button" className="link-button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
-        {open ? 'Hide the math' : 'Show the math'}
+        {label ?? (open ? 'Hide the math' : 'Show the math')}
       </button>
       {open && (
         <div id={id} className="math-body">

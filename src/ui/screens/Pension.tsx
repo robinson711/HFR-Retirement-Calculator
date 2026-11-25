@@ -125,6 +125,32 @@ export function Pension({ inputs, result, set, onEditSchedule }: { inputs: Scena
           onChange={(destination) => set((s) => ({ ...s, plop: { ...s.plop, destination } }))}
           hint="Rolling it into a retirement plan defers tax. Anything else is paid to you and taxed as income that year (20% is withheld for federal tax)."
         />
+        {p.plop.lumpSum > 0 && plopDest.use === 'account' && (
+          <ShowMath label="Is there a limit on how much I can roll over?">
+            <p>
+              No. RSA treats the PLOP as an eligible rollover distribution, so you can roll over all or part of it. A direct rollover into your 457(b), a
+              traditional IRA or another pre-tax plan is not a contribution, so the yearly limits (for example $7,500 for an IRA in 2026) don&apos;t apply. No tax
+              is due and nothing is withheld until you take the money out.
+            </p>
+            <ul>
+              <li>Ask RSA for a direct rollover. If the check is paid to you, 20% is withheld, and you have 60 days to deposit the full amount to avoid tax.</li>
+              <li>
+                Yearly limits only matter if you take the cash and then put it in as a regular contribution, so only a small part of it would fit.
+              </li>
+              <li>
+                You can roll it into a Roth IRA, but the whole amount is taxed as income that year. The app treats a Roth destination that way. It can&apos;t go
+                straight into a Roth 457(b).
+              </li>
+              <li>
+                Withdrawals from an IRA before age 59½ usually owe a 10% extra tax, and the app models that. Money rolled into the 457(b) is kept in a separate
+                account. Ask your plan whether the 10% applies to it before 59½. The app assumes it doesn&apos;t.
+              </li>
+            </ul>
+            <p className="hint">
+              Sources: RSA, Partial Lump Sum Option Plan; IRS Topic 413, Rollovers from retirement plans; IRS Rollover Chart; IRS Publication 590-A.
+            </p>
+          </ShowMath>
+        )}
         {plopDest.use === 'mortgage' && (
           <>
             <PercentField
