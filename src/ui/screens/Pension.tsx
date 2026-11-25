@@ -1,4 +1,4 @@
-import { deathByYear, inServiceDeathEligibility, plopCumulative, type ScenarioInputs, type ScenarioResult } from '../../engine/model';
+import { deathByYear, inServiceDeathEligibility, plopCumulative, plopToDestination, type ScenarioInputs, type ScenarioResult } from '../../engine/model';
 import { plopLimits } from '../../engine/plop';
 import { WORK_SCHEDULES, type WorkSchedule } from '../../engine/sickLeave';
 import { OPTION_LABELS, type SurvivorOption } from '../../engine/survivor';
@@ -12,6 +12,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
   const p = result.pension;
   const a = inputs.assumptions;
   const sl = p.sickLeave;
+  const plopDest = plopToDestination(inputs, p);
   const tier2 = inputs.member.tier === 'tier2';
   const limits = plopLimits(p.maximum.monthly);
   const death = deathByYear(inputs, p);
@@ -117,6 +118,12 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
           onChange={(destination) => set((s) => ({ ...s, plop: { ...s.plop, destination } }))}
           hint="Rolling it into a retirement plan defers tax. Taken as cash, 20% is withheld for federal tax."
         />
+        {p.plop.lumpSum > 0 && !plopDest.rollover && (
+          <Note>
+            This account isn&apos;t a pre-tax retirement plan, so the lump sum is taxed as income in {p.retirementDate.year}: about {dollars(plopDest.tax)} in federal and
+            Alabama tax, leaving {dollars(plopDest.net)} to invest. Choose your traditional 457(b) or another pre-tax account to roll it over tax-free.
+          </Note>
+        )}
         <NumberField
           label="Reduction per $1,000 from your letter (0 = RSA table)"
           value={inputs.plop.per1000Override ?? 0}

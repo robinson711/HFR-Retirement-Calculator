@@ -1,6 +1,6 @@
 import { computeLeave, type PensionResult, type ScenarioInputs } from '../../engine/model';
-import { WORK_SCHEDULES } from '../../engine/sickLeave';
-import { KeyNumber, MoneyField, Note, NumberField, Section, ShowMath, Table, Toggle } from '../components';
+import { WORK_SCHEDULES, type WorkSchedule } from '../../engine/sickLeave';
+import { KeyNumber, MoneyField, Note, NumberField, Section, SelectField, ShowMath, Table, Toggle } from '../components';
 import { dollars, k, ym } from '../format';
 import type { Setter } from './You';
 
@@ -27,6 +27,15 @@ export function LeavePayout({ inputs, pension, set }: { inputs: ScenarioInputs; 
         Annual, holiday and compensatory leave are paid at 100% of your hourly rate when you leave, up to each cap. Enter the balances you expect to have on
         your last day.
       </p>
+      <SelectField
+        label="Work schedule"
+        value={inputs.sickLeave.workSchedule}
+        options={Object.entries(WORK_SCHEDULES).map(([key, v]) => [key as WorkSchedule, v.label])}
+        onChange={(workSchedule) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, workSchedule } }))}
+        hint={`Sets your hourly rate (final base pay ÷ ${schedule.hoursPerYear.toLocaleString()} hours) and the caps: ${l.payout.lines
+          .map((x) => `${x.label.toLowerCase()} ${x.capHours} hours`)
+          .join(', ')}. Personnel Manual 10.6, 8.13 and 8.12(A). This is the same setting as in Sick leave above.`}
+      />
       <div className="row wrap">
         <NumberField label="Annual leave" value={inputs.leave.annualHours} min={0} suffix="hours" onChange={(v) => upd({ annualHours: Math.max(0, v) })} />
         <NumberField label="Holiday leave" value={inputs.leave.holidayHours} min={0} suffix="hours" onChange={(v) => upd({ holidayHours: Math.max(0, v) })} />

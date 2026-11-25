@@ -488,6 +488,7 @@ export function planInputs(inputs: ScenarioInputs, pension: PensionResult, overr
   // Sick leave cash, after tax, in today's dollars.
   const sickCash = inputs.sickLeave.choice === 'cash' ? pension.sickLeave.cashAfterTax * toToday : 0;
   const leave = computeLeave(inputs, pension);
+  const plop = plopToDestination(inputs, pension, leave);
   return {
     startYear,
     filing: inputs.filing,
@@ -498,7 +499,7 @@ export function planInputs(inputs: ScenarioInputs, pension: PensionResult, overr
     pensionMonthly: pension.finalMonthly,
     survivorMonthly: pension.survivorMonthly,
     memberDeathYear: null,
-    plopLumpSum: pension.plop.lumpSum * toToday,
+    plopLumpSum: plop.net * toToday,
     plopDestination: inputs.plop.destination,
     sickLeaveCashAfterTax: sickCash,
     leaveCashAfterTax: leave.chosen.netCash * toToday,
@@ -618,6 +619,43 @@ export function computeLeave(inputs: ScenarioInputs, pension: PensionResult): Le
 }
 
 /** Federal tax the public safety officer premium exclusion saves, today's dollars, over the retirement years it applies. */
+export interface PlopDestination {
+  account: Account | undefined;
+  /** True when the PLOP is rolled into a pre-tax plan, so no tax is due until it is withdrawn. */
+  rollover: boolean;
+  /** Federal and Alabama income tax on the lump sum in the retirement year (0 for a rollover), nominal. */
+  tax: number;
+  /** What lands in the account, nominal. */
+  net: number;
+}
+
+/**
+ * Where the PLOP goes. Rolled into a pre-tax account (traditional 457(b), IRA, TSP) it isn't taxed until withdrawn.
+ * Paid to a taxable or Roth account it is taxed as income in the retirement year, on top of that year's pay and pension.
+ * No 10% early-withdrawal tax: public safety officers who separate at 50 or later, or with 25 years, are exempt.
+ */
+export function plopToDestination(inputs: ScenarioInputs, pension: PensionResult, leave = computeLeave(inputs, pension)): PlopDestination {
+  const lump = pension.plop.lumpSum;
+  const held = heldAccounts(inputs.accounts);
+  const account = held.find((a) => a.id === inputs.plop.destination) ?? held.find((a) => a.kind === 'taxable');
+  const rollover = account?.kind === '457b' || account?.kind === 'pretax';
+  if (lump <= 0 || rollover) return { account, rollover, tax: 0, net: lump };
+  const taxOn = (pretaxWithdrawals: number) =>
+    computeTax({
+      filing: inputs.filing,
+      calendarYear: pension.retirementDate.year,
+      over65Count: 0,
+      pension: leave.otherPension,
+      wages: leave.otherWages,
+      pretaxWithdrawals,
+      socialSecurity: 0,
+      capitalGains: 0,
+      earlyWithdrawalPenaltyBase: 0,
+    }).total;
+  const tax = taxOn(lump) - taxOn(0);
+  return { account, rollover, tax, net: lump - tax };
+}
+
 export function psoSavings(plan: PlanInputs): { years: number; perYear: number; total: number } {
   const on = project({ ...plan, psoPremiumExclusion: true }).rows;
   const off = project({ ...plan, psoPremiumExclusion: false }).rows;
@@ -944,19 +982,37 @@ export function comparisons(inputs: ScenarioInputs, paths = 300): Comparison[] {
     });
   }
   const plopMonths = inputs.plop.months > 0 ? inputs.plop.months : 24;
+  const plopDest = plopToDestination(
+    { ...inputs, plop: { ...inputs.plop, months: plopMonths } },
+    computePension({ ...inputs, plop: { ...inputs.plop, months: plopMonths } }),
+  );
+  const mix = (a: Account) => {
+    const parts = [`${Math.round(a.allocation.stocks * 100)}% stocks`];
+    if (a.allocation.bonds > 0) parts.push(`${Math.round(a.allocation.bonds * 100)}% bonds`);
+    if (a.allocation.cash > 0) parts.push(`${Math.round(a.allocation.cash * 100)}% cash`);
+    return parts.join(', ');
+  };
   out.push({
     title: 'PLOP vs. no PLOP',
     variants: [
       variantOf('No PLOP', { ...inputs, plop: { ...inputs.plop, months: 0 } }, paths),
-      variantOf(`PLOP ${plopMonths} months`, { ...inputs, plop: { ...inputs.plop, months: plopMonths } }, paths, 'Invested per the destination account'),
       variantOf(
-        `PLOP ${plopMonths} months, 100% stocks`,
-        { ...inputs, plop: { ...inputs.plop, months: plopMonths, destination: 'plop-stocks' } },
+        `PLOP ${plopMonths} months into ${plopDest.account?.kind === '457b' ? 'traditional 457(b)' : (plopDest.account?.label ?? 'savings')}`,
+        { ...inputs, plop: { ...inputs.plop, months: plopMonths } },
         paths,
-        'Rolled into a separate all-stock account',
-        (p) => ({
+        plopDest.account
+          ? plopDest.rollover
+            ? `Rolled into your ${plopDest.account.label} (${mix(plopDest.account)}). No tax until you withdraw it.`
+            : `Paid to you: about ${Math.round(plopDest.tax / 1000)}k income tax now, the rest invested in your ${plopDest.account.label} (${mix(plopDest.account)}).`
+          : undefined,
+      ),
+      variantOf(
+        `PLOP ${plopMonths} months into a new all-stock rollover`,
+        {
+          ...inputs,
+          plop: { ...inputs.plop, months: plopMonths, destination: 'plop-stocks' },
           accounts: [
-            ...p.accounts,
+            ...inputs.accounts,
             {
               id: 'plop-stocks',
               label: 'PLOP rollover (stocks)',
@@ -967,8 +1023,9 @@ export function comparisons(inputs: ScenarioInputs, paths = 300): Comparison[] {
               allocation: { stocks: 1, bonds: 0, cash: 0 },
             },
           ],
-          plopDestination: 'plop-stocks',
-        }),
+        },
+        paths,
+        'Rolled into a separate pre-tax account that is 100% stocks. No tax until you withdraw it.',
       ),
     ],
   });
