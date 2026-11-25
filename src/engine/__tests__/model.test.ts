@@ -1,4 +1,4 @@
-import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension, inServiceDeathEligibility, planInputs, plopToDestination, psoSavings } from '../model';
+import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension, inServiceDeathEligibility, planInputs, plopToDestination, psoSavings, mortgageBalanceAt, yearsToPayOff, PLOP_MORTGAGE, PLOP_PURCHASE, type ScenarioInputs } from '../model';
 import { project } from '../cashflow';
 
 describe('scenario model', () => {
@@ -126,6 +126,65 @@ describe('where the PLOP goes', () => {
     const plop = comparisons(inputs, 10).find((c) => c.title === 'PLOP vs. no PLOP')!;
     expect(plop.variants[1]!.label).toMatch(/457\(b\)/);
     expect(plop.variants[1]!.note).toMatch(/Rolled into/);
-    expect(plop.variants[2]!.label).toMatch(/all-stock rollover/);
+    expect(plop.variants.some((v) => /all-stock rollover/.test(v.label))).toBe(true);
+    expect(plop.variants.some((v) => /pay down the mortgage/.test(v.label))).toBe(true);
+  });
+});
+
+describe('PLOP to pay down the mortgage or for a large purchase', () => {
+  const base = defaultInputs({ year: 2026, month: 11 });
+  const withPlop = (destination: string, extra: Partial<ScenarioInputs['plop']> = {}, expenses: Partial<ScenarioInputs['expenses']> = {}): ScenarioInputs => ({
+    ...base,
+    plop: { ...base.plop, months: 24, destination, ...extra },
+    expenses: { ...base.expenses, ...expenses },
+  });
+
+  it('estimates the mortgage balance from the payment, payoff year and rate', () => {
+    expect(mortgageBalanceAt(2040, 12000, 2044, 0)).toBe(60000);
+    expect(mortgageBalanceAt(2040, 12000, 2044, 0.05)).toBeCloseTo((12000 * (1 - 1.05 ** -5)) / 0.05, 6);
+    expect(mortgageBalanceAt(2046, 12000, 2045, 0.05)).toBe(0);
+    expect(yearsToPayOff(mortgageBalanceAt(2040, 12000, 2049, 0.04), 12000, 0.04)).toBeCloseTo(10, 6);
+  });
+
+  it('pays the mortgage off, taxed first, and stops the payment', () => {
+    const i = withPlop(PLOP_MORTGAGE, {}, { mortgagePayoffYear: 2042 });
+    const p = computePension(i);
+    const d = plopToDestination(i, p);
+    expect(d.use).toBe('mortgage');
+    expect(d.tax).toBeGreaterThan(0);
+    expect(d.toMortgage).toBeCloseTo(d.mortgageBalance, 6);
+    expect(d.leftover).toBeCloseTo(d.net - d.mortgageBalance, 6);
+    expect(d.mortgagePayoffYear).toBe(p.retirementDate.year - 1);
+    const plan = planInputs(i, p);
+    expect(plan.expenses.mortgagePayoffYear).toBe(p.retirementDate.year - 1);
+    expect(project(plan).rows.every((r) => r.mortgage === 0)).toBe(true);
+  });
+
+  it('pays part of a bigger mortgage, so it ends sooner with the same payment', () => {
+    const i = withPlop(PLOP_MORTGAGE, {}, { mortgageAnnual: 30000, mortgagePayoffYear: 2060 });
+    const d = plopToDestination(i, computePension(i));
+    expect(d.toMortgage).toBeCloseTo(d.net, 6);
+    expect(d.leftover).toBeCloseTo(0, 6);
+    expect(d.mortgagePayoffYear).toBeLessThan(2060);
+  });
+
+  it('spends a large purchase and saves the rest', () => {
+    const all = plopToDestination(withPlop(PLOP_PURCHASE), computePension(withPlop(PLOP_PURCHASE)));
+    expect(all.spent).toBeCloseTo(all.net, 6);
+    expect(all.leftover).toBe(0);
+    const part = withPlop(PLOP_PURCHASE, { purchaseAmount: 40000 });
+    const d = plopToDestination(part, computePension(part));
+    expect(d.spent).toBe(40000);
+    expect(d.leftover).toBeCloseTo(d.net - 40000, 6);
+    // Spending it leaves less to live on than investing it.
+    const invest = withPlop('457b');
+    const s = (x: ScenarioInputs) => computeScenario(x, 10).sustainable;
+    expect(s(withPlop(PLOP_PURCHASE))).toBeLessThan(s(invest));
+  });
+
+  it('describes the choice on Compare', () => {
+    const plop = comparisons(withPlop(PLOP_MORTGAGE), 10).find((c) => c.title === 'PLOP vs. no PLOP')!;
+    expect(plop.variants[1]!.label).toMatch(/mortgage/);
+    expect(plop.variants[1]!.note).toMatch(/income tax now/);
   });
 });

@@ -111,7 +111,11 @@ export interface ScenarioInputs {
     specialCatchUp: boolean;
     underusedPriorYears: number;
   };
-  plop: { months: number; destination: string | null; per1000Override: number | null };
+  /**
+   * destination: an account id, PLOP_MORTGAGE (pay down the mortgage) or PLOP_PURCHASE (spend it).
+   * purchaseAmount: dollars of the retirement year to spend; 0 = all of it.
+   */
+  plop: { months: number; destination: string | null; per1000Override: number | null; purchaseAmount?: number };
   survivor: {
     option: SurvivorOption;
     hasBeneficiary: boolean;
@@ -130,7 +134,8 @@ export interface ScenarioInputs {
     member: SsPerson;
     spouse: SsPerson;
   };
-  expenses: { core: number; healthPre65: number; healthPost65: number; mortgageAnnual: number; mortgagePayoffYear: number };
+  /** mortgageRate: the loan's interest rate, used to estimate the balance left when you retire. */
+  expenses: { core: number; healthPre65: number; healthPost65: number; mortgageAnnual: number; mortgagePayoffYear: number; mortgageRate?: number };
   preset: PresetName;
   assumptions: Assumptions;
   monteCarloPaths: number;
@@ -215,7 +220,7 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
       member: { include: true, claimAge: 67, source: 'estimate', fraMonthly: 0, pastYears: 12, pastAverage: 55000, currentEarnings: 0, stopAge: 62 },
       spouse: { include: true, claimAge: 67, source: 'estimate', fraMonthly: 0, pastYears: 10, pastAverage: 45000, currentEarnings: 50000, stopAge: 62 },
     },
-    expenses: { core: 60000, healthPre65: 14000, healthPost65: 7000, mortgageAnnual: 18000, mortgagePayoffYear: 2045 },
+    expenses: { core: 60000, healthPre65: 14000, healthPost65: 7000, mortgageAnnual: 18000, mortgagePayoffYear: 2045, mortgageRate: 0.04 },
     preset: 'base',
     assumptions: { ...PRESETS.base, longevityAge: 95, pensionCola: 0 },
     monteCarloPaths: 1000,
@@ -499,15 +504,15 @@ export function planInputs(inputs: ScenarioInputs, pension: PensionResult, overr
     pensionMonthly: pension.finalMonthly,
     survivorMonthly: pension.survivorMonthly,
     memberDeathYear: null,
-    plopLumpSum: plop.net * toToday,
-    plopDestination: inputs.plop.destination,
+    plopLumpSum: plop.leftover * toToday,
+    plopDestination: plop.account?.id ?? null,
     sickLeaveCashAfterTax: sickCash,
     leaveCashAfterTax: leave.chosen.netCash * toToday,
     leaveDeferral: leave.chosen.deferred * toToday,
     secondJob: inputs.secondJob.enabled ? { ...inputs.secondJob } : null,
     psoPremiumExclusion: inputs.psoPremiumExclusion,
     socialSecurity: resolveSocialSecurity(inputs, pension).benefits,
-    expenses: inputs.expenses,
+    expenses: { ...inputs.expenses, mortgagePayoffYear: plop.mortgagePayoffYear },
     accounts: heldAccounts(inputs.accounts),
     withdrawalOrder: inputs.withdrawalOrder,
     assumptions: inputs.assumptions,
@@ -619,14 +624,46 @@ export function computeLeave(inputs: ScenarioInputs, pension: PensionResult): Le
 }
 
 /** Federal tax the public safety officer premium exclusion saves, today's dollars, over the retirement years it applies. */
+export const PLOP_MORTGAGE = 'pay-mortgage';
+export const PLOP_PURCHASE = 'large-purchase';
+
 export interface PlopDestination {
+  use: 'account' | 'mortgage' | 'purchase';
+  /** The account that receives the PLOP, or what is left after the mortgage or purchase. */
   account: Account | undefined;
   /** True when the PLOP is rolled into a pre-tax plan, so no tax is due until it is withdrawn. */
   rollover: boolean;
   /** Federal and Alabama income tax on the lump sum in the retirement year (0 for a rollover), nominal. */
   tax: number;
-  /** What lands in the account, nominal. */
+  /** The lump sum after tax, nominal. */
   net: number;
+  /** Mortgage: estimated balance when you retire, what the PLOP pays toward it, and the new payoff year. */
+  mortgageBalance: number;
+  toMortgage: number;
+  mortgagePayoffYear: number;
+  /** Purchase: dollars spent, nominal. */
+  spent: number;
+  /** What goes into `account` after the mortgage or purchase, nominal. */
+  leftover: number;
+}
+
+/**
+ * Mortgage balance when you retire: the present value of the payments still due, one a year from the retirement
+ * year through the payoff year, at the loan's rate. Payments are fixed in dollars.
+ */
+export function mortgageBalanceAt(year: number, payment: number, payoffYear: number, rate: number): number {
+  const n = payoffYear - year + 1;
+  if (n <= 0 || payment <= 0) return 0;
+  return rate > 0 ? (payment * (1 - Math.pow(1 + rate, -n))) / rate : payment * n;
+}
+
+/** Years of the same payment needed to clear a balance (fractional). */
+export function yearsToPayOff(balance: number, payment: number, rate: number): number {
+  if (balance <= 0) return 0;
+  if (payment <= 0) return Infinity;
+  if (rate <= 0) return balance / payment;
+  const x = 1 - (balance * rate) / payment;
+  return x <= 0 ? Infinity : -Math.log(x) / Math.log(1 + rate);
 }
 
 /**
@@ -637,9 +674,17 @@ export interface PlopDestination {
 export function plopToDestination(inputs: ScenarioInputs, pension: PensionResult, leave = computeLeave(inputs, pension)): PlopDestination {
   const lump = pension.plop.lumpSum;
   const held = heldAccounts(inputs.accounts);
-  const account = held.find((a) => a.id === inputs.plop.destination) ?? held.find((a) => a.kind === 'taxable');
-  const rollover = account?.kind === '457b' || account?.kind === 'pretax';
-  if (lump <= 0 || rollover) return { account, rollover, tax: 0, net: lump };
+  const dest = inputs.plop.destination;
+  const use: PlopDestination['use'] = dest === PLOP_MORTGAGE ? 'mortgage' : dest === PLOP_PURCHASE ? 'purchase' : 'account';
+  const taxable = held.find((a) => a.kind === 'taxable');
+  const account = use === 'account' ? (held.find((a) => a.id === dest) ?? taxable) : taxable;
+  const rollover = use === 'account' && (account?.kind === '457b' || account?.kind === 'pretax');
+  const year = pension.retirementDate.year;
+  const ex = inputs.expenses;
+  const rate = ex.mortgageRate ?? 0.04;
+  const mortgageBalance = mortgageBalanceAt(year, ex.mortgageAnnual, ex.mortgagePayoffYear, rate);
+  const base = { use, account, rollover, mortgageBalance, toMortgage: 0, mortgagePayoffYear: ex.mortgagePayoffYear, spent: 0 };
+  if (lump <= 0 || rollover) return { ...base, tax: 0, net: lump, leftover: lump };
   const taxOn = (pretaxWithdrawals: number) =>
     computeTax({
       filing: inputs.filing,
@@ -653,7 +698,52 @@ export function plopToDestination(inputs: ScenarioInputs, pension: PensionResult
       earlyWithdrawalPenaltyBase: 0,
     }).total;
   const tax = taxOn(lump) - taxOn(0);
-  return { account, rollover, tax, net: lump - tax };
+  const net = lump - tax;
+  if (use === 'mortgage') {
+    const toMortgage = Math.min(net, mortgageBalance);
+    const left = mortgageBalance - toMortgage;
+    // The same payment continues until the smaller balance is gone; nothing is due once it is paid off.
+    const yearsLeft = left > 0.5 ? Math.ceil(yearsToPayOff(left, ex.mortgageAnnual, rate) - 1e-9) : 0;
+    const mortgagePayoffYear = Math.min(ex.mortgagePayoffYear, year + yearsLeft - 1);
+    return { ...base, tax, net, toMortgage, mortgagePayoffYear, leftover: net - toMortgage };
+  }
+  if (use === 'purchase') {
+    const wanted = inputs.plop.purchaseAmount ?? 0;
+    const spent = wanted > 0 ? Math.min(wanted, net) : net;
+    return { ...base, tax, net, spent, leftover: net - spent };
+  }
+  return { ...base, tax, net, leftover: net };
+}
+
+/** One line describing where a PLOP goes, for Compare. */
+export function describePlop(d: PlopDestination): string {
+  const k1 = (v: number) => `$${Math.round(v / 1000).toLocaleString()}k`;
+  const mix = (a: Account) =>
+    [
+      `${Math.round(a.allocation.stocks * 100)}% stocks`,
+      ...(a.allocation.bonds > 0 ? [`${Math.round(a.allocation.bonds * 100)}% bonds`] : []),
+      ...(a.allocation.cash > 0 ? [`${Math.round(a.allocation.cash * 100)}% cash`] : []),
+    ].join(', ');
+  if (d.use === 'mortgage') {
+    const rest = d.leftover > 500 ? ` The other ${k1(d.leftover)} goes to savings.` : '';
+    return d.toMortgage >= d.mortgageBalance - 0.5
+      ? `About ${k1(d.tax)} income tax now, then ${k1(d.toMortgage)} pays off the mortgage, so its payment stops.${rest}`
+      : `About ${k1(d.tax)} income tax now, then ${k1(d.toMortgage)} goes to the mortgage, so it is paid off by ${d.mortgagePayoffYear}.`;
+  }
+  if (d.use === 'purchase') {
+    const rest = d.leftover > 500 ? ` The other ${k1(d.leftover)} goes to savings.` : '';
+    return `About ${k1(d.tax)} income tax now, then ${k1(d.spent)} is spent on the purchase and is gone from your savings.${rest}`;
+  }
+  if (!d.account) return 'Kept as cash.';
+  return d.rollover
+    ? `Rolled into your ${d.account.label} (${mix(d.account)}). No tax until you withdraw it.`
+    : `Paid to you: about ${k1(d.tax)} income tax now, the rest invested in your ${d.account.label} (${mix(d.account)}).`;
+}
+
+export function plopUseLabel(d: PlopDestination): string {
+  if (d.use === 'mortgage') return 'to pay down the mortgage';
+  if (d.use === 'purchase') return 'for a large purchase';
+  return `into ${d.account?.kind === '457b' ? 'traditional 457(b)' : (d.account?.label ?? 'savings')}`;
 }
 
 export function psoSavings(plan: PlanInputs): { years: number; perYear: number; total: number } {
@@ -982,53 +1072,45 @@ export function comparisons(inputs: ScenarioInputs, paths = 300): Comparison[] {
     });
   }
   const plopMonths = inputs.plop.months > 0 ? inputs.plop.months : 24;
-  const plopDest = plopToDestination(
-    { ...inputs, plop: { ...inputs.plop, months: plopMonths } },
-    computePension({ ...inputs, plop: { ...inputs.plop, months: plopMonths } }),
-  );
-  const mix = (a: Account) => {
-    const parts = [`${Math.round(a.allocation.stocks * 100)}% stocks`];
-    if (a.allocation.bonds > 0) parts.push(`${Math.round(a.allocation.bonds * 100)}% bonds`);
-    if (a.allocation.cash > 0) parts.push(`${Math.round(a.allocation.cash * 100)}% cash`);
-    return parts.join(', ');
+  // Your choice first, then the other ways to use the same lump sum: a 457(b) rollover, paying down the mortgage
+  // (when there is one left at retirement) and an all-stock rollover. A purchase only shows when it is your choice.
+  const plopWith = (destination: string | null) => {
+    const i = { ...inputs, plop: { ...inputs.plop, months: plopMonths, destination } };
+    return { inputs: i, dest: plopToDestination(i, computePension(i)) };
   };
-  out.push({
-    title: 'PLOP vs. no PLOP',
-    variants: [
-      variantOf('No PLOP', { ...inputs, plop: { ...inputs.plop, months: 0 } }, paths),
-      variantOf(
-        `PLOP ${plopMonths} months into ${plopDest.account?.kind === '457b' ? 'traditional 457(b)' : (plopDest.account?.label ?? 'savings')}`,
-        { ...inputs, plop: { ...inputs.plop, months: plopMonths } },
-        paths,
-        plopDest.account
-          ? plopDest.rollover
-            ? `Rolled into your ${plopDest.account.label} (${mix(plopDest.account)}). No tax until you withdraw it.`
-            : `Paid to you: about ${Math.round(plopDest.tax / 1000)}k income tax now, the rest invested in your ${plopDest.account.label} (${mix(plopDest.account)}).`
-          : undefined,
-      ),
-      variantOf(
-        `PLOP ${plopMonths} months into a new all-stock rollover`,
-        {
-          ...inputs,
-          plop: { ...inputs.plop, months: plopMonths, destination: 'plop-stocks' },
-          accounts: [
-            ...inputs.accounts,
-            {
-              id: 'plop-stocks',
-              label: 'PLOP rollover (stocks)',
-              kind: 'pretax',
-              owner: 'member',
-              balance: 0,
-              contribution: 0,
-              allocation: { stocks: 1, bonds: 0, cash: 0 },
-            },
-          ],
-        },
-        paths,
-        'Rolled into a separate pre-tax account that is 100% stocks. No tax until you withdraw it.',
-      ),
-    ],
-  });
+  const plopVariant = (destination: string | null) => {
+    const { inputs: i, dest } = plopWith(destination);
+    return variantOf(`PLOP ${plopMonths} months ${plopUseLabel(dest)}`, i, paths, describePlop(dest));
+  };
+  const chosen = plopWith(inputs.plop.destination);
+  const trad457 = heldAccounts(inputs.accounts).find((a) => a.kind === '457b' && a.owner === 'member');
+  const plopVariants = [variantOf('No PLOP', { ...inputs, plop: { ...inputs.plop, months: 0 } }, paths), plopVariant(inputs.plop.destination)];
+  if (trad457 && chosen.dest.account?.id !== trad457.id) plopVariants.push(plopVariant(trad457.id));
+  if (chosen.dest.use !== 'mortgage' && chosen.dest.mortgageBalance > 0) plopVariants.push(plopVariant(PLOP_MORTGAGE));
+  plopVariants.push(
+    variantOf(
+      `PLOP ${plopMonths} months into a new all-stock rollover`,
+      {
+        ...inputs,
+        plop: { ...inputs.plop, months: plopMonths, destination: 'plop-stocks' },
+        accounts: [
+          ...inputs.accounts,
+          {
+            id: 'plop-stocks',
+            label: 'PLOP rollover (stocks)',
+            kind: 'pretax',
+            owner: 'member',
+            balance: 0,
+            contribution: 0,
+            allocation: { stocks: 1, bonds: 0, cash: 0 },
+          },
+        ],
+      },
+      paths,
+      'Rolled into a separate pre-tax account that is 100% stocks. No tax until you withdraw it.',
+    ),
+  );
+  out.push({ title: 'PLOP vs. no PLOP', variants: plopVariants });
   out.push({
     title: 'Survivor options',
     variants: (['maximum', 'option1', 'option2', 'option3'] as SurvivorOption[]).map((o) =>
