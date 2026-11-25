@@ -46,7 +46,7 @@ export function Pension({ inputs, result, set, onEditSchedule }: { inputs: Scena
           ['Average final salary', `${dollars(p.maximum.afs)}: highest ${p.afsYears.length} of the last 10 fiscal years`],
           ['Benefit factor', pct(p.maximum.factor, 4)],
           ['Service credit', `${years(p.service.actualMonths)} actual + ${years(p.service.sickLeaveMonths)} sick leave + ${years(p.service.stressMonths)} stress credit`],
-          ['Pay', `Schedule COLA ${pct(inputs.pay.scheduleColaPct)} a year, one step a year, ${inputs.pay.fitnessIncentive ? 'fitness incentive 5%' : 'no fitness incentive'}, 2% raise added to the FY2027 schedule`],
+          ['Pay', `Schedule COLA ${pct(inputs.pay.scheduleColaPct)} a year, one step a year, ${inputs.pay.fitnessIncentive ? 'fitness incentive 5%' : 'no fitness incentive'}, FY2027 schedule as published (it includes this year's 2% COLA)`],
           ['Survivor option', p.chosen.basis === 'letter' ? 'From your RSA estimate letter' : 'Rough estimate (enter your letter below for the exact figure)'],
         ]}
       />

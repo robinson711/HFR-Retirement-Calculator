@@ -68,8 +68,10 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
 
       <Section title="Pay" who="you">
         <p className="lead">
-          From the FY{SCHEDULE.fiscalYear} public safety salary schedule, effective {SCHEDULE.effectiveDate}, plus the {pct(todayScale - 1, 0)} raise granted this year that the
-          schedule file does not show yet.
+          From the FY{SCHEDULE.fiscalYear} public safety salary schedule, effective {SCHEDULE.effectiveDate}
+          {todayScale > 1
+            ? `, plus the ${pct(todayScale - 1, 0)} raise granted this year that the schedule file does not show yet.`
+            : ", which already includes this year's 2% COLA."}
         </p>
         <div className="row">
           <SelectField label="Current grade" value={inputs.pay.grade} options={grades.map((g) => [g, g])} onChange={(grade) => set((s) => ({ ...s, pay: { ...s.pay, grade, promotions: [] } }))} />

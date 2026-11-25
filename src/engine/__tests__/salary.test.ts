@@ -10,7 +10,7 @@ const inputs: PayInputs = {
 
 describe('salary schedule', () => {
   it('loads every grade with 25 steps', () => {
-    expect(s.colaNotInSchedule).toBe(0.02);
+    expect(s.colaNotInSchedule).toBe(0);
     expect(Object.keys(s.grades)).toEqual(['13P', '14P', '15P', '16P', '17P', '18P', '19P', '20P']);
     for (const row of Object.values(s.grades)) expect(row).toHaveLength(25);
   });
@@ -34,11 +34,11 @@ describe('promotion rule (Personnel Manual 8.4(A))', () => {
 });
 
 describe('salary path', () => {
-  it('adds one step per year, the 2% raise missing from the file, schedule COLAs and the fitness incentive', () => {
+  it('adds one step per year, schedule COLAs and the fitness incentive, using the FY2027 rates as published', () => {
     const path = salaryPath(s, inputs, 2029);
     expect(path.map((y) => y.step)).toEqual([10, 11, 12]);
-    expect(path[0]!.base).toBeCloseTo(84364.8 * 1.02, 2);
-    expect(path[2]!.base).toBeCloseTo(86923.2 * 1.02 * 1.02 ** 2, 2);
+    expect(path[0]!.base).toBeCloseTo(84364.8, 2);
+    expect(path[2]!.base).toBeCloseTo(86923.2 * 1.02 ** 2, 2);
     expect(path[0]!.incentive).toBeCloseTo(path[0]!.base * 0.05, 6);
     expect(path[0]!.longevity).toBeCloseTo(150 * 5.25, 6);
   });
