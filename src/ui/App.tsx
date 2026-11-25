@@ -54,101 +54,116 @@ export function App() {
 
   const p = result.pension;
   return (
-    <div className="app">
+    <>
       <a className="skip" href="#panel">
         Skip to content
       </a>
-      <header className="top">
-        <div className="brand">
-          <h1>HFR Retirement Estimator</h1>
-          <p>For Huntsville Fire and Rescue members of RSA ERS. Runs entirely in your browser.</p>
-        </div>
-        <div className="headline" aria-live="polite">
-          <div>
-            <span className="hl-label">Pension</span>
-            <span className="hl-value">{monthly(p.finalMonthly)}/mo</span>
+      <header className="masthead">
+        <div className="masthead-inner top">
+          <div className="brand">
+            <div className="mark" aria-hidden="true">
+              HFR
+            </div>
+            <div>
+              <h1>HFR Retirement Estimator</h1>
+              <p>For Huntsville Fire and Rescue members of RSA ERS. Runs entirely in your browser.</p>
+            </div>
           </div>
-          <div>
-            <span className="hl-label">Retire</span>
-            <span className="hl-value">{ym(p.retirementDate)}</span>
+          <div className="headline" aria-live="polite">
+            <div>
+              <span className="hl-label">Pension</span>
+              <span className="hl-value">{monthly(p.finalMonthly)}/mo</span>
+            </div>
+            <div>
+              <span className="hl-label">Retire</span>
+              <span className="hl-value">{ym(p.retirementDate)}</span>
+            </div>
+            <div>
+              <span className="hl-label">Savings last</span>
+              <span className="hl-value">{pct(result.monteCarlo.successRate, 0)}</span>
+            </div>
+            <div>
+              <span className="hl-label">Can spend</span>
+              <span className="hl-value">{k(result.sustainable)}/yr</span>
+            </div>
+            <span className="estimate-tag">All estimates</span>
           </div>
-          <div>
-            <span className="hl-label">Savings last</span>
-            <span className="hl-value">{pct(result.monteCarlo.successRate, 0)}</span>
-          </div>
-          <div>
-            <span className="hl-label">Can spend</span>
-            <span className="hl-value">{k(result.sustainable)}/yr</span>
-          </div>
-          <span className="estimate-tag">All estimates</span>
         </div>
       </header>
 
-      <nav className="tabs no-print" role="tablist" aria-label="Sections">
-        {TABS.map(([id, label], i) => (
-          <button
-            key={id}
-            ref={(el) => {
-              tabRefs.current[id] = el;
-            }}
-            role="tab"
-            id={`tab-${id}`}
-            aria-selected={tab === id}
-            aria-controls="panel"
-            tabIndex={tab === id ? 0 : -1}
-            onClick={() => setTab(id)}
-            onKeyDown={(e) => onTabKey(e, i)}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+      <div className="tabs-wrap no-print">
+        <nav className="tabs" role="tablist" aria-label="Sections">
+          {TABS.map(([id, label], i) => (
+            <button
+              key={id}
+              ref={(el) => {
+                tabRefs.current[id] = el;
+              }}
+              role="tab"
+              id={`tab-${id}`}
+              aria-selected={tab === id}
+              aria-controls="panel"
+              tabIndex={tab === id ? 0 : -1}
+              onClick={() => setTab(id)}
+              onKeyDown={(e) => onTabKey(e, i)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-      <main id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className={stale ? 'stale' : ''} tabIndex={-1}>
-        {tab === 'you' && <You inputs={inputs} set={set} />}
-        {tab === 'pension' && <Pension inputs={inputs} result={result} set={set} />}
-        {tab === 'savings' && <Savings inputs={inputs} result={result} set={set} onPreset={(preset) => dispatch({ type: 'preset', preset })} />}
-        {tab === 'plan' && <Plan inputs={deferred} result={result} />}
-        {tab === 'compare' && <Compare inputs={deferred} />}
-        {tab === 'survivors' && <Survivors inputs={deferred} result={result} />}
-        {tab === 'summary' && <Summary inputs={deferred} result={result} />}
-        {tab === 'rules' && <Rules />}
-      </main>
+      <div className="app">
+        <main id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className={stale ? 'stale' : ''} tabIndex={-1}>
+          {tab === 'you' && <You inputs={inputs} set={set} />}
+          {tab === 'pension' && <Pension inputs={inputs} result={result} set={set} />}
+          {tab === 'savings' && <Savings inputs={inputs} result={result} set={set} onPreset={(preset) => dispatch({ type: 'preset', preset })} />}
+          {tab === 'plan' && <Plan inputs={deferred} result={result} />}
+          {tab === 'compare' && <Compare inputs={deferred} />}
+          {tab === 'survivors' && <Survivors inputs={deferred} result={result} />}
+          {tab === 'summary' && <Summary inputs={deferred} result={result} />}
+          {tab === 'rules' && <Rules />}
+        </main>
 
-      <footer className="foot">
-        <div className="save no-print">
-          <label>
-            <input type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} /> Remember my inputs on this device
-          </label>
-          <button type="button" className="button secondary" onClick={() => exportJson(inputs)}>
-            Export to a file
-          </button>
-          <button type="button" className="button secondary" onClick={() => fileRef.current?.click()}>
-            Import a file
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            className="visually-hidden"
-            aria-label="Import a scenario file"
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              try {
-                dispatch({ type: 'replace', inputs: await importJson(f) });
-                setError(null);
-              } catch (err) {
-                setError((err as Error).message);
-              }
-              e.target.value = '';
-            }}
-          />
-          {error && <span role="alert" className="error">{error}</span>}
-        </div>
-        <Disclaimer />
-        <p className="hint">No accounts, no tracking, and nothing is sent anywhere. Saving is optional and stays on this device.</p>
-      </footer>
-    </div>
+        <footer className="foot">
+          <div className="save no-print">
+            <label>
+              <input type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} /> Remember my inputs on this device
+            </label>
+            <button type="button" className="button secondary" onClick={() => exportJson(inputs)}>
+              Export to a file
+            </button>
+            <button type="button" className="button secondary" onClick={() => fileRef.current?.click()}>
+              Import a file
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              className="visually-hidden"
+              aria-label="Import a scenario file"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                try {
+                  dispatch({ type: 'replace', inputs: await importJson(f) });
+                  setError(null);
+                } catch (err) {
+                  setError((err as Error).message);
+                }
+                e.target.value = '';
+              }}
+            />
+            {error && (
+              <span role="alert" className="error">
+                {error}
+              </span>
+            )}
+          </div>
+          <Disclaimer />
+          <p className="hint">No accounts, no tracking, and nothing is sent anywhere. Saving is optional and stays on this device.</p>
+        </footer>
+      </div>
+    </>
   );
 }

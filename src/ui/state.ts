@@ -53,7 +53,9 @@ export function fromSaved(saved: Partial<ScenarioInputs>): ScenarioInputs {
   if (typeof pay.fitnessIncentive !== 'boolean') pay.fitnessIncentive = (pay.fitnessIncentivePct ?? 0.05) > 0;
   for (const old of ['missingColaPct', 'fitnessIncentivePct', 'fitnessStopsFiscalYear', 'promotionRaisePerGrade']) delete (pay as Record<string, unknown>)[old];
   const sickLeave = { ...base.sickLeave, ...(saved.sickLeave ?? {}) };
-  delete (sickLeave as Record<string, unknown>).capMonths;
+  const oldSick = sickLeave as Record<string, unknown>;
+  if (oldSick.workSchedule !== 'fireSuppression' && oldSick.workSchedule !== 'fortyHour') sickLeave.workSchedule = oldSick.hoursPerDay === 8 ? 'fortyHour' : 'fireSuppression';
+  for (const old of ['capMonths', 'accrualHoursPerYear', 'hoursPerDay']) delete oldSick[old];
   // Social Security: older versions stored { monthly, claimAge } or null per person.
   type OldSs = { monthly: number; claimAge: number } | null | undefined;
   const savedSs = (saved.socialSecurity ?? {}) as Record<string, unknown>;

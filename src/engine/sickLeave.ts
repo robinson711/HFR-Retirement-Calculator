@@ -9,6 +9,18 @@ import { shiftHoursToDays, sickLeaveCreditMonths } from './service';
 /** Fire suppression sick leave accrual per year in shift hours: 4 h x 26 pay periods x (2,912 / 2,080). */
 export const SHIFT_ACCRUAL_HOURS_PER_YEAR = 4 * 26 * (2912 / 2080);
 
+export type WorkSchedule = 'fireSuppression' | 'fortyHour';
+
+/**
+ * Personnel Manual 10.7(D): 4 hours per pay period (26 a year) for the standard 40-hour week, prorated for longer
+ * schedules. Fire suppression works a 2,912-hour year, so it accrues 104 x 2,912 / 2,080 = 145.6 hours, and 11.2
+ * of its hours make one 8-hour day.
+ */
+export const WORK_SCHEDULES: Record<WorkSchedule, { label: string; accrualHoursPerYear: number; hoursPerDay: number; hoursPerYear: number }> = {
+  fireSuppression: { label: 'Fire suppression (2,912-hour year)', accrualHoursPerYear: SHIFT_ACCRUAL_HOURS_PER_YEAR, hoursPerDay: 11.2, hoursPerYear: 2912 },
+  fortyHour: { label: '40-hour employee (2,080-hour year)', accrualHoursPerYear: 4 * 26, hoursPerDay: 8, hoursPerYear: 2080 },
+};
+
 export function projectSickLeaveHours(currentHours: number, accrualHoursPerYear: number, usedHoursPerYear: number, years: number): number {
   return Math.max(0, currentHours + (accrualHoursPerYear - usedHoursPerYear) * years);
 }
