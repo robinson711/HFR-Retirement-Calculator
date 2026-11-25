@@ -59,3 +59,12 @@ describe('in-service death eligibility (ERS Handbook p.16)', () => {
     expect(e.viaStressCredit).toBe(false);
   });
 });
+
+describe('comparisons', () => {
+  it('gives each option its own sustainable spending', () => {
+    for (const c of comparisons(defaultInputs({ year: 2026, month: 11 }), 20)) {
+      const values = c.variants.map((v) => Math.round(v.sustainable));
+      expect(new Set(values).size).toBe(values.length);
+    }
+  });
+});

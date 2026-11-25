@@ -188,3 +188,5 @@ tbody th { font-weight: 500; }
   .table-wrap { max-height: none; overflow: visible; }
 }
 .promotion-result { margin: 4px 0 8px; }
+fieldset.account h4 { margin: 10px 0 4px; font-size: 0.95rem; }
+.total-line { margin: 8px 0; }

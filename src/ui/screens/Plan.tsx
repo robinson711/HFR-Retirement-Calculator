@@ -14,7 +14,7 @@ export function Plan({ inputs, result }: { inputs: ScenarioInputs; result: Scena
     pension: r.pension,
     job: r.job,
     socialSecurity: r.socialSecurity,
-    withdrawals: r.withdrawals.taxable + r.withdrawals['457b'] + r.withdrawals.pretax + r.withdrawals.roth,
+    withdrawals: r.withdrawals.taxable + r.withdrawals['457b'] + r.withdrawals.roth457 + r.withdrawals.pretax + r.withdrawals.roth,
     shortfall: r.shortfall,
   }));
   const balances = mc.percentiles.map((p, i) => ({ ...p, expected: projection.rows[i]!.balance }));
@@ -58,7 +58,7 @@ export function Plan({ inputs, result }: { inputs: ScenarioInputs; result: Scena
             k(r.pension),
             k(r.job),
             k(r.socialSecurity),
-            k(r.withdrawals.taxable + r.withdrawals['457b'] + r.withdrawals.pretax + r.withdrawals.roth),
+            k(r.withdrawals.taxable + r.withdrawals['457b'] + r.withdrawals.roth457 + r.withdrawals.pretax + r.withdrawals.roth),
             k(r.taxes),
             k(r.spending),
             k(r.balance),

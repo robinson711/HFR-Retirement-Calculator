@@ -1,20 +1,29 @@
 import type { Account, AccountKind } from '../../engine/cashflow';
-import { PRESETS, type PresetName, type ScenarioInputs } from '../../engine/model';
-import { MoneyField, Note, NumberField, PercentField, Section, SelectField, Toggle } from '../components';
-import { k } from '../format';
+import { PRESETS, resolveSocialSecurity, type PresetName, type ScenarioInputs, type ScenarioResult, type SsDetail, type SsPerson } from '../../engine/model';
+import { MoneyField, Note, NumberField, PercentField, Section, SelectField, ShowMath, Toggle } from '../components';
+import { dollars, k, monthly } from '../format';
 import type { Setter } from './You';
 
-const KIND_LABEL: Record<AccountKind, string> = { '457b': '457(b)', pretax: 'Pre-tax (TSP, IRA, 401(k))', taxable: 'Taxable brokerage', roth: 'Roth' };
+const KIND_LABEL: Record<AccountKind, string> = {
+  '457b': '457(b) traditional',
+  roth457: '457(b) Roth',
+  pretax: 'Pre-tax (TSP, IRA, 401(k))',
+  taxable: 'Taxable brokerage',
+  roth: 'Roth IRA',
+};
+const is457 = (a: Account) => a.owner === 'member' && (a.kind === '457b' || a.kind === 'roth457');
 
-export function Savings({ inputs, set, onPreset }: { inputs: ScenarioInputs; set: Setter; onPreset: (p: PresetName) => void }) {
+export function Savings({ inputs, result, set, onPreset }: { inputs: ScenarioInputs; result: ScenarioResult; set: Setter; onPreset: (p: PresetName) => void }) {
   const setAcc = (id: string, update: (a: Account) => Account) => set((s) => ({ ...s, accounts: s.accounts.map((a) => (a.id === id ? update(a) : a)) }));
   const total = inputs.accounts.reduce((s, a) => s + a.balance, 0);
   const a = inputs.assumptions;
+  const ss = resolveSocialSecurity(inputs, result.pension);
   return (
     <div className="grid">
       <Section title="Savings accounts">
         <p className="lead">Total today: {k(total)}. Contributions continue until you retire.</p>
-        {inputs.accounts.map((acc) => {
+        <DeferredComp inputs={inputs} set={set} />
+        {inputs.accounts.filter((acc) => !is457(acc)).map((acc) => {
           const allocSum = acc.allocation.stocks + acc.allocation.bonds + acc.allocation.cash;
           return (
             <fieldset key={acc.id} className="account">
@@ -39,11 +48,11 @@ export function Savings({ inputs, set, onPreset }: { inputs: ScenarioInputs; set
         })}
         <SelectField
           label="Withdrawal order"
-          value={inputs.withdrawalOrder.join(',')}
+          value={orderValue(inputs.withdrawalOrder)}
           options={[
-            ['taxable,457b,pretax,roth', 'Taxable, then pre-tax, then Roth'],
-            ['457b,pretax,taxable,roth', 'Pre-tax, then taxable, then Roth'],
-            ['taxable,roth,457b,pretax', 'Taxable, then Roth, then pre-tax'],
+            ['taxable,457b,pretax,roth457,roth', 'Taxable, then pre-tax, then Roth'],
+            ['457b,pretax,taxable,roth457,roth', 'Pre-tax, then taxable, then Roth'],
+            ['taxable,roth457,roth,457b,pretax', 'Taxable, then Roth, then pre-tax'],
           ]}
           onChange={(v) => set((s) => ({ ...s, withdrawalOrder: v.split(',') as AccountKind[] }))}
           hint="457(b) withdrawals after you leave the city have no 10% early withdrawal penalty. IRA withdrawals before 59½ usually do."
@@ -73,35 +82,14 @@ export function Savings({ inputs, set, onPreset }: { inputs: ScenarioInputs; set
           </>
         )}
         <h3>Social Security</h3>
-        <div className="row wrap">
-          <MoneyField
-            label="Your monthly benefit (today's dollars)"
-            value={inputs.socialSecurity.member?.monthly ?? 0}
-            step={50}
-            onChange={(monthly) => set((s) => ({ ...s, socialSecurity: { ...s.socialSecurity, member: monthly > 0 ? { claimAge: s.socialSecurity.member?.claimAge ?? 67, monthly } : null } }))}
-          />
-          <NumberField
-            label="Your claiming age"
-            value={inputs.socialSecurity.member?.claimAge ?? 67}
-            min={62}
-            max={70}
-            onChange={(claimAge) => set((s) => ({ ...s, socialSecurity: { ...s.socialSecurity, member: s.socialSecurity.member ? { ...s.socialSecurity.member, claimAge: Math.round(claimAge) } : null } }))}
-          />
-          <MoneyField
-            label="Spouse monthly benefit"
-            value={inputs.socialSecurity.spouse?.monthly ?? 0}
-            step={50}
-            onChange={(monthly) => set((s) => ({ ...s, socialSecurity: { ...s.socialSecurity, spouse: monthly > 0 ? { claimAge: s.socialSecurity.spouse?.claimAge ?? 67, monthly } : null } }))}
-          />
-          <NumberField
-            label="Spouse claiming age"
-            value={inputs.socialSecurity.spouse?.claimAge ?? 67}
-            min={62}
-            max={70}
-            onChange={(claimAge) => set((s) => ({ ...s, socialSecurity: { ...s.socialSecurity, spouse: s.socialSecurity.spouse ? { ...s.socialSecurity.spouse, claimAge: Math.round(claimAge) } : null } }))}
-          />
-        </div>
-        <p className="hint">Use the estimate at your claiming age from ssa.gov/myaccount.</p>
+        <Toggle
+          label="Your City job pays into Social Security"
+          checked={inputs.socialSecurity.cityJobCovered}
+          onChange={(cityJobCovered) => set((s) => ({ ...s, socialSecurity: { ...s.socialSecurity, cityJobCovered } }))}
+          hint="Check your pay stub for a Social Security or OASDI deduction."
+        />
+        <SocialSecurityPerson who="member" person={inputs.socialSecurity.member} detail={ss.member} set={set} />
+        <SocialSecurityPerson who="spouse" person={inputs.socialSecurity.spouse} detail={ss.spouse} set={set} />
       </Section>
 
       <Section title="Spending in retirement">
@@ -149,5 +137,150 @@ export function Savings({ inputs, set, onPreset }: { inputs: ScenarioInputs; set
         />
       </Section>
     </div>
+  );
+}
+
+/** Map any saved order (older versions had no Roth 457) onto one of the listed choices. */
+function orderValue(order: AccountKind[]): string {
+  const key = order.filter((k) => k !== 'roth457').join(',');
+  if (key === '457b,pretax,taxable,roth') return '457b,pretax,taxable,roth457,roth';
+  if (key === 'taxable,roth,457b,pretax') return 'taxable,roth457,roth,457b,pretax';
+  return 'taxable,457b,pretax,roth457,roth';
+}
+
+function DeferredComp({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
+  const trad = inputs.accounts.find((a) => a.owner === 'member' && a.kind === '457b');
+  const roth = inputs.accounts.find((a) => a.owner === 'member' && a.kind === 'roth457');
+  const setKind = (kind: '457b' | 'roth457', field: 'balance' | 'contribution', v: number) =>
+    set((s) => {
+      const exists = s.accounts.some((a) => a.owner === 'member' && a.kind === kind);
+      const blank: Account = {
+        id: kind === '457b' ? '457b' : '457b-roth',
+        label: KIND_LABEL[kind],
+        kind,
+        owner: 'member',
+        balance: 0,
+        contribution: 0,
+        allocation: (trad ?? roth)?.allocation ?? { stocks: 0.8, bonds: 0.2, cash: 0 },
+      };
+      const accounts = exists ? s.accounts : [...s.accounts, blank];
+      return { ...s, accounts: accounts.map((a) => (a.owner === 'member' && a.kind === kind ? { ...a, [field]: v } : a)) };
+    });
+  const alloc = (trad ?? roth)?.allocation ?? { stocks: 0.8, bonds: 0.2, cash: 0 };
+  const setAlloc = (key: 'stocks' | 'bonds' | 'cash', v: number) =>
+    set((s) => ({ ...s, accounts: s.accounts.map((a) => (is457(a) ? { ...a, allocation: { ...a.allocation, [key]: v } } : a)) }));
+  const allocSum = alloc.stocks + alloc.bonds + alloc.cash;
+  const balance = (trad?.balance ?? 0) + (roth?.balance ?? 0);
+  const contribution = (trad?.contribution ?? 0) + (roth?.contribution ?? 0);
+  return (
+    <fieldset className="account">
+      <legend>457(b) deferred compensation</legend>
+      <h4>Traditional (pre-tax)</h4>
+      <div className="row wrap">
+        <MoneyField label="Traditional balance" value={trad?.balance ?? 0} step={1000} onChange={(v) => setKind('457b', 'balance', v)} />
+        <MoneyField label="Traditional yearly contribution" value={trad?.contribution ?? 0} onChange={(v) => setKind('457b', 'contribution', v)} />
+      </div>
+      <h4>Roth (after-tax)</h4>
+      <div className="row wrap">
+        <MoneyField label="Roth balance" value={roth?.balance ?? 0} step={1000} onChange={(v) => setKind('roth457', 'balance', v)} />
+        <MoneyField label="Roth yearly contribution" value={roth?.contribution ?? 0} onChange={(v) => setKind('roth457', 'contribution', v)} />
+      </div>
+      <p className="total-line">
+        Total 457(b) balance: <strong>{dollars(balance)}</strong>. Total yearly contribution: <strong>{dollars(contribution)}</strong>.
+      </p>
+      <div className="row wrap">
+        <PercentField label="Stocks" value={alloc.stocks} step={5} min={0} max={100} onChange={(v) => setAlloc('stocks', v)} />
+        <PercentField label="Bonds" value={alloc.bonds} step={5} min={0} max={100} onChange={(v) => setAlloc('bonds', v)} />
+        <PercentField label="Cash" value={alloc.cash} step={5} min={0} max={100} onChange={(v) => setAlloc('cash', v)} />
+      </div>
+      {Math.abs(allocSum - 1) > 0.001 && <Note kind="warn">Stocks, bonds and cash add up to {Math.round(allocSum * 100)}%, not 100%.</Note>}
+      <p className="hint">
+        Traditional withdrawals are taxed as income. Roth withdrawals are tax-free once you are 59½ and the Roth account is 5 years old (the app treats them as
+        tax-free). The yearly IRS limit covers both together. Neither has the 10% early withdrawal penalty after you leave the City.
+      </p>
+    </fieldset>
+  );
+}
+
+function SocialSecurityPerson({ who, person, detail, set }: { who: 'member' | 'spouse'; person: SsPerson; detail: SsDetail | null; set: Setter }) {
+  const you = who === 'member';
+  const name = you ? 'You' : 'Your spouse';
+  const upd = (u: Partial<SsPerson>) => set((s) => ({ ...s, socialSecurity: { ...s.socialSecurity, [who]: { ...s.socialSecurity[who], ...u } } }));
+  const fraAge = detail ? `${Math.floor(detail.fraAgeMonths / 12)}${detail.fraAgeMonths % 12 ? ` and ${detail.fraAgeMonths % 12} months` : ''}` : '67';
+  return (
+    <fieldset className="account">
+      <legend>{you ? 'Your Social Security' : "Spouse's Social Security"}</legend>
+      <Toggle label={`Include ${you ? 'your' : "your spouse's"} benefit`} checked={person.include} onChange={(include) => upd({ include })} />
+      {person.include && (
+        <>
+          <SelectField
+            label="Benefit amount"
+            value={person.source}
+            options={[
+              ['estimate', 'Estimate it for me'],
+              ['statement', 'I have my SSA statement'],
+            ]}
+            onChange={(source) => upd({ source })}
+          />
+          {person.source === 'statement' ? (
+            <MoneyField
+              label="Monthly benefit at full retirement age"
+              value={person.fraMonthly}
+              step={50}
+              onChange={(fraMonthly) => upd({ fraMonthly })}
+              hint={`From the statement at ssa.gov/myaccount: the amount at full retirement age (${fraAge}). The app adjusts it for your claiming age.`}
+            />
+          ) : (
+            <>
+              <div className="row wrap">
+                <NumberField
+                  label="Years already worked paying Social Security tax"
+                  value={person.pastYears}
+                  min={0}
+                  max={50}
+                  onChange={(v) => upd({ pastYears: Math.max(0, Math.round(v)) })}
+                  hint={you ? 'Include your fire department years so far and any earlier jobs.' : undefined}
+                />
+                <MoneyField label="Average yearly pay in those years (today's dollars)" value={person.pastAverage} step={1000} onChange={(pastAverage) => upd({ pastAverage })} />
+              </div>
+              {you ? (
+                <p className="hint">Your future City pay comes from the pay and promotion plan on the first tab, plus any second job below.</p>
+              ) : (
+                <div className="row wrap">
+                  <MoneyField label="Spouse's yearly pay now" value={person.currentEarnings} step={1000} onChange={(currentEarnings) => upd({ currentEarnings })} />
+                  <NumberField label="Spouse stops working at age" value={person.stopAge} min={40} max={75} onChange={(v) => upd({ stopAge: Math.round(v) })} />
+                </div>
+              )}
+            </>
+          )}
+          <NumberField label="Claiming age" value={person.claimAge} min={62} max={70} onChange={(v) => upd({ claimAge: Math.min(70, Math.max(62, Math.round(v))) })} />
+          {detail && (
+            <p className="total-line">
+              {name}: about <strong>{monthly(detail.monthly)}</strong> a month at {person.claimAge}
+              {person.source === 'estimate' ? ' (a rough estimate)' : ''}, in today&apos;s dollars.
+            </p>
+          )}
+          {detail?.estimate && (
+            <ShowMath>
+              <pre className="formula">
+                {`${detail.estimate.yearsWithEarnings} years of earnings; the highest 35 count, capped at $184,500 a year.\n`}
+                {`Average indexed monthly earnings: ${dollars(detail.estimate.aime)}\n`}
+                {`90% of the first $1,286 + 32% up to $7,749 + 15% above = ${monthly(detail.fraMonthly)} at full retirement age (${fraAge})\n`}
+                {`Claiming at ${person.claimAge}: × ${detail.factor.toFixed(3)} = ${monthly(detail.monthly)} a month`}
+              </pre>
+              <p className="hint">
+                A rough estimate using 2026 SSA figures and today&apos;s wages. For your real number, sign in at ssa.gov/myaccount and switch to &ldquo;I have my
+                SSA statement.&rdquo;
+              </p>
+            </ShowMath>
+          )}
+          {!detail?.estimate && detail && (
+            <p className="hint">
+              {monthly(detail.fraMonthly)} at full retirement age × {detail.factor.toFixed(3)} for claiming at {person.claimAge}.
+            </p>
+          )}
+        </>
+      )}
+    </fieldset>
   );
 }

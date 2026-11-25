@@ -1,6 +1,6 @@
 // Scenario state. Nothing leaves the browser: saving is opt-in to localStorage, or a JSON file the user exports.
 import { useEffect, useReducer } from 'react';
-import { defaultInputs, PRESETS, type PresetName, type ScenarioInputs } from '../engine/model';
+import { defaultInputs, PRESETS, type PresetName, type ScenarioInputs, type SsPerson } from '../engine/model';
 
 const STORAGE_KEY = 'hfr-retirement-scenario-v1';
 const SAVE_FLAG = 'hfr-retirement-save-enabled';
@@ -54,7 +54,31 @@ export function fromSaved(saved: Partial<ScenarioInputs>): ScenarioInputs {
   for (const old of ['missingColaPct', 'fitnessIncentivePct', 'fitnessStopsFiscalYear', 'promotionRaisePerGrade']) delete (pay as Record<string, unknown>)[old];
   const sickLeave = { ...base.sickLeave, ...(saved.sickLeave ?? {}) };
   delete (sickLeave as Record<string, unknown>).capMonths;
-  return { ...base, ...saved, pay, sickLeave, today: today() };
+  // Social Security: older versions stored { monthly, claimAge } or null per person.
+  type OldSs = { monthly: number; claimAge: number } | null | undefined;
+  const savedSs = (saved.socialSecurity ?? {}) as Record<string, unknown>;
+  const person = (key: 'member' | 'spouse') => {
+    const v = savedSs[key] as Partial<SsPerson> | OldSs;
+    if (v && 'source' in v) return { ...base.socialSecurity[key], ...v };
+    if (v === null) return { ...base.socialSecurity[key], include: false };
+    if (v && 'monthly' in v) return { ...base.socialSecurity[key], source: 'statement' as const, fraMonthly: v.monthly, claimAge: v.claimAge };
+    return base.socialSecurity[key];
+  };
+  const socialSecurity = {
+    cityJobCovered: typeof savedSs.cityJobCovered === 'boolean' ? savedSs.cityJobCovered : base.socialSecurity.cityJobCovered,
+    member: person('member'),
+    spouse: person('spouse'),
+  };
+  // 457(b): older versions had one traditional account. Add an empty Roth 457(b) beside it.
+  let accounts = saved.accounts ?? base.accounts;
+  if (!accounts.some((a) => a.kind === 'roth457')) {
+    const trad = accounts.find((a) => a.owner === 'member' && a.kind === '457b');
+    accounts = [
+      ...accounts.map((a) => (a === trad ? { ...a, label: '457(b) traditional' } : a)),
+      { id: '457b-roth', label: '457(b) Roth', kind: 'roth457', owner: 'member', balance: 0, contribution: 0, allocation: trad?.allocation ?? { stocks: 0.8, bonds: 0.2, cash: 0 } },
+    ];
+  }
+  return { ...base, ...saved, pay, sickLeave, socialSecurity, accounts, today: today() };
 }
 
 function initial(): ScenarioInputs {
