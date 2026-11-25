@@ -24,6 +24,8 @@ describe('457(b) room (IRS Notices 2025-67 and 2026-66)', () => {
   it('uses the larger of the special catch-up and the age catch-up, never both', () => {
     const r = deferralRoom({ ...base, calendarYear: 2026, ageAtYearEnd: 52, specialCatchUp: true, underusedPriorYears: 100000 });
     expect(r).toMatchObject({ yearMax: 49000, catchUpKind: 'special' });
+    // Both options are reported so the walkthrough can explain the choice.
+    expect(r).toMatchObject({ ageCatchUp: 8000, ageCatchUpKind: 'age50', specialTotal: 49000, ageAtYearEnd: 52 });
     const small = deferralRoom({ ...base, calendarYear: 2026, ageAtYearEnd: 52, specialCatchUp: true, underusedPriorYears: 3000 });
     expect(small).toMatchObject({ yearMax: 32500, catchUpKind: 'age50' });
   });

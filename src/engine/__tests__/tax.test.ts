@@ -53,3 +53,18 @@ describe('Alabama tax', () => {
     expect(over.alabamaTaxableIncome).toBeLessThan(under.alabamaTaxableIncome);
   });
 });
+
+describe('retired public safety officer premium exclusion (IRC 402(l))', () => {
+  it('lowers federal taxable income by the excluded premiums, not Alabama tax', () => {
+    const without = computeTax({ ...base, pension: 80000 });
+    const withPso = computeTax({ ...base, pension: 80000, psoExclusion: 3000 });
+    expect(without.federalTaxableIncome - withPso.federalTaxableIncome).toBeCloseTo(3000, 6);
+    expect(without.federal - withPso.federal).toBeCloseTo(360, 6); // 12% bracket
+    expect(withPso.alabama).toBeGreaterThanOrEqual(without.alabama);
+  });
+
+  it("can't exclude more than the pension and plan withdrawals", () => {
+    const t = computeTax({ ...base, wages: 50000, pension: 1000, psoExclusion: 3000 });
+    expect(computeTax({ ...base, wages: 50000 }).federalTaxableIncome - t.federalTaxableIncome).toBeCloseTo(0, 6);
+  });
+});

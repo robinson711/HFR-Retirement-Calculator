@@ -312,3 +312,19 @@ fieldset.who-spouse { border-left: 4px solid var(--spouse); }
 }
 .who-badge.who-you { color: var(--you); background: var(--you-bg); }
 .who-badge.who-spouse { color: var(--spouse); background: var(--spouse-bg); }
+
+/* Numbered walkthrough steps. */
+ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 12px 0; }
+ol.steps > li { counter-increment: step; position: relative; padding: 0 0 18px 44px; border-left: 2px solid var(--border); margin-left: 15px; }
+ol.steps > li:last-child { border-left-color: transparent; }
+ol.steps > li::before {
+  content: counter(step); position: absolute; left: -16px; top: 0; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 700; font-size: 0.9rem; background: var(--you-bg); color: var(--you);
+}
+ol.steps h4 { margin: 4px 0 8px; font-size: 0.95rem; }
+ol.steps ul { padding-left: 18px; margin: 0; }
+ol.steps ul li { margin-bottom: 6px; }
+@media (max-width: 520px) {
+  ol.steps > li { padding-left: 30px; margin-left: 13px; }
+  ol.steps > li::before { width: 26px; height: 26px; left: -14px; }
+}

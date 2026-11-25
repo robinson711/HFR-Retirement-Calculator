@@ -1,4 +1,5 @@
-import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension, inServiceDeathEligibility, planInputs } from '../model';
+import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension, inServiceDeathEligibility, planInputs, psoSavings } from '../model';
+import { project } from '../cashflow';
 
 describe('scenario model', () => {
   const inputs = defaultInputs();
@@ -87,5 +88,21 @@ describe("accounts the member doesn't have", () => {
     expect(roth.balance).toBe(0);
     expect(roth.contribution).toBe(0);
     expect(computeScenario(without, 20).sustainable).toBeLessThan(computeScenario(inputs, 20).sustainable);
+  });
+});
+
+describe('public safety officer premium exclusion in the projection', () => {
+  it('excludes at most $3,000 (shrinking in today’s dollars) while you are alive, and saves federal tax', () => {
+    const inputs = defaultInputs({ year: 2026, month: 11 });
+    const plan = planInputs(inputs, computePension(inputs));
+    const rows = project(plan).rows.filter((r) => r.retired);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(r.psoExcluded).toBeLessThanOrEqual(3000);
+    expect(rows[1]!.psoExcluded).toBeGreaterThan(rows[rows.length - 1]!.psoExcluded);
+    const s = psoSavings(plan);
+    expect(s.years).toBeGreaterThan(0);
+    expect(s.perYear).toBeGreaterThan(0);
+    const dead = project({ ...plan, memberDeathYear: plan.retirementYear + 1 }).rows.filter((r) => r.year >= plan.retirementYear + 1);
+    for (const r of dead) expect(r.psoExcluded).toBe(0);
   });
 });
