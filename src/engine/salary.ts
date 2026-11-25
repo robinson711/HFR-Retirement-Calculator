@@ -5,7 +5,8 @@
 //    first step giving at least 5% for each grade jumped, whichever is higher. The anniversary date (and so the
 //    yearly step) does not change on promotion: Manual 8.4(C).
 //  - Fitness incentive: 5% of base (grade and step) for passing the Physical Capabilities Drill: Manual 8.6(C).
-//  - The FY2027 schedule file predates the 2% raise granted in 2026, so every rate is raised by colaNotInSchedule.
+//  - The FY2027 schedule already includes the 2% COLA granted in 2026. colaNotInSchedule (0 now) adds a raise a future file
+//    doesn't show yet to every rate.
 //  - Longevity pay: $5.25 per month of continuous service ($63 per year): Manual 8.19.
 //  - Earnable compensation for RSA is capped at 120% (Tier 1) or 125% (Tier 2) of base pay: ERS Handbook p.8.
 // The model works in City fiscal years (October-September), matching RSA's salary averaging.
