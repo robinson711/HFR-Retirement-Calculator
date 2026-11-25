@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import type { YearMonth } from '../engine/service';
 
 export type Who = 'you' | 'spouse' | 'beneficiary';
@@ -8,15 +8,61 @@ export function WhoBadge({ who }: { who: Who }) {
   return <span className={`who-badge who-${who}`}>{who === 'you' ? 'You' : who === 'spouse' ? 'Spouse' : 'Beneficiary'}</span>;
 }
 
-export function Section({ title, children, id, who }: { title: string; children: ReactNode; id?: string; who?: Who }) {
+/**
+ * Open or closed, per section, while the page is open. Kept in memory only (nothing is saved), so switching tabs keeps
+ * a section the way the user left it. A choice is forgotten when the section's "doesn't apply" state changes.
+ */
+const sectionState = new Map<string, { open: boolean; notApplicable: boolean }>();
+const sectionOpeners = new Map<string, () => void>();
+
+/** Opens the collapsed section that holds `el`, so it can be shown and focused. */
+export function openSectionContaining(el: Element | null) {
+  const key = el?.closest('section[data-section]')?.getAttribute('data-section');
+  if (key) sectionOpeners.get(key)?.();
+}
+
+/**
+ * A card with a heading. Every section can be collapsed with the button in its heading. When `notApplicable` is set
+ * (a short reason, such as "You're not taking a PLOP"), the section starts collapsed and shows the reason instead.
+ */
+export function Section({ title, children, id, who, notApplicable }: { title: string; children: ReactNode; id?: string; who?: Who; notApplicable?: string }) {
   const hid = id ?? title.replace(/\W+/g, '-');
+  const na = !!notApplicable;
+  const saved = sectionState.get(hid);
+  const [open, setOpenState] = useState(saved && saved.notApplicable === na ? saved.open : !na);
+  const setOpen = (o: boolean) => {
+    sectionState.set(hid, { open: o, notApplicable: na });
+    setOpenState(o);
+  };
+  // When the section starts or stops applying, go back to the default: closed if it doesn't apply, open if it does.
+  useEffect(() => {
+    const s = sectionState.get(hid);
+    if (s && s.notApplicable !== na) {
+      sectionState.delete(hid);
+      setOpenState(!na);
+    }
+  }, [hid, na]);
+  useEffect(() => {
+    sectionOpeners.set(hid, () => setOpen(true));
+    return () => {
+      sectionOpeners.delete(hid);
+    };
+  });
+  const bodyId = `${hid}-body`;
   return (
-    <section className={`card${who ? ` who-${who}` : ''}`} aria-labelledby={hid}>
-      <h2 id={hid}>
-        {who && <WhoBadge who={who} />}
-        {title}
+    <section className={`card${who ? ` who-${who}` : ''}${open ? '' : ' collapsed'}`} aria-labelledby={hid} data-section={hid}>
+      <h2 id={hid} className="card-head">
+        <button type="button" className="card-toggle" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen(!open)}>
+          <span className="chevron" aria-hidden="true" />
+          {who && <WhoBadge who={who} />}
+          <span className="card-title">{title}</span>
+          {na && <span className="na-chip">Doesn't apply</span>}
+        </button>
       </h2>
-      {children}
+      {!open && notApplicable && <p className="na-reason">{notApplicable} Open this section to change it.</p>}
+      <div id={bodyId} className="card-body" hidden={!open}>
+        {children}
+      </div>
     </section>
   );
 }

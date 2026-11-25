@@ -22,7 +22,11 @@ export function LeavePayout({ inputs, pension, set, onEditSchedule }: { inputs: 
   const prior = { year: d.month === 1 ? d.year - 1 : d.year, month: d.month === 1 ? 12 : d.month - 1 };
   const usingSpecial = r.catchUpKind === 'special';
   return (
-    <Section title="Other leave paid at retirement" who="you">
+    <Section
+      title="Other leave paid at retirement"
+      who="you"
+      notApplicable={inputs.leave.annualHours + inputs.leave.holidayHours + inputs.leave.compHours === 0 ? 'No annual, holiday or comp time to be paid out.' : undefined}
+    >
       <p className="lead">
         Annual, holiday and compensatory leave are paid at 100% of your hourly rate when you leave, up to each cap. Enter the balances you expect to have on
         your last day.
