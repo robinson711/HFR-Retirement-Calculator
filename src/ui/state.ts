@@ -80,7 +80,8 @@ export function fromSaved(saved: Partial<ScenarioInputs>): ScenarioInputs {
       { id: '457b-roth', label: '457(b) Roth', kind: 'roth457', owner: 'member', balance: 0, contribution: 0, allocation: trad?.allocation ?? { stocks: 0.8, bonds: 0.2, cash: 0 } },
     ];
   }
-  return { ...base, ...saved, pay, sickLeave, socialSecurity, accounts, today: today() };
+  const leave = { ...base.leave, ...(saved.leave ?? {}) };
+  return { ...base, ...saved, pay, sickLeave, socialSecurity, accounts, leave, today: today() };
 }
 
 function initial(): ScenarioInputs {

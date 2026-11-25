@@ -5,6 +5,7 @@ import { OPTION_LABELS, type SurvivorOption } from '../../engine/survivor';
 import { PlopChart, PurchasingPowerChart } from '../charts';
 import { Assumptions, KeyNumber, MonthYearField, MoneyField, Note, NumberField, Section, SelectField, ShowMath, Table, Toggle } from '../components';
 import { cents, dollars, k, monthly, pct, years, ym } from '../format';
+import { LeavePayout } from './LeavePayout';
 import type { Setter } from './You';
 
 export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; result: ScenarioResult; set: Setter }) {
@@ -66,7 +67,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         />
       </ShowMath>
 
-      <Section title="Survivor options">
+      <Section title="Survivor options" who="spouse">
         <p className="lead">
           Enter the amounts from your RSA estimate letter for exact figures. Without them, Options 1 to 3 are rough estimates scaled from one real RSA letter.
         </p>
@@ -99,7 +100,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         </details>
       </Section>
 
-      <Section title="PLOP (partial lump sum)">
+      <Section title="PLOP (partial lump sum)" who="you">
         <NumberField
           label="Months of the Maximum to take as a lump sum (0 = none)"
           value={inputs.plop.months}
@@ -137,7 +138,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         )}
       </Section>
 
-      <Section title="Sick leave: cash or credit">
+      <Section title="Sick leave: cash or credit" who="you">
         <div className="keys">
           <KeyNumber label="Cash after tax" value={k(sl.cashAfterTax)} sub={`50% of ${Math.round(sl.hours)} hours, about ${pct(1 - sl.cashAfterTax / Math.max(1, sl.cashGross), 0)} tax`} />
           <KeyNumber label="Credit: lifetime value" value={k(sl.pensionIncreaseValue)} sub={`${sl.creditMonths} months of credit = ${monthly(sl.pensionIncreaseMonthly)} more a month`} />
@@ -155,7 +156,9 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         </ShowMath>
       </Section>
 
-      <Section title="If you die before you can retire">
+      <LeavePayout inputs={inputs} pension={p} set={set} />
+
+      <Section title="If you die before you can retire" who="spouse">
         <p>
           Before retirement eligibility, your beneficiary gets your contributions plus interest and one year of salary, not a pension.
           {maxGap > 0 && (
@@ -189,7 +192,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         </Note>
       </Section>
 
-      <Section title="Pension after retirement">
+      <Section title="Pension after retirement" who="you">
         <Toggle
           label={`Assume a ${pct(a.pensionCola)} retiree COLA`}
           checked={a.pensionCola > 0}

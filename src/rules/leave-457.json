@@ -1,0 +1,110 @@
+{
+  "id": "leave-457",
+  "version": "2026-11-25",
+  "rules": {
+    "annualLeave.payoutCapHours.fortyHour": {
+      "label": "Annual leave paid at separation, 40-hour employee",
+      "value": 260,
+      "unit": "hours at the regular hourly rate",
+      "source": "huntsville-personnel-manual",
+      "citation": "Personnel Manual 10.6",
+      "status": "verified"
+    },
+    "annualLeave.payoutCapHours.fireSuppression": {
+      "label": "Annual leave paid at separation, fire suppression",
+      "value": 364,
+      "unit": "hours: the manual says 'the equivalent for fire suppression employees' of 260 hours; 260 x 2,912 / 2,080 = 364. Confirm with Human Resources",
+      "source": "huntsville-personnel-manual",
+      "citation": "Personnel Manual 10.6",
+      "status": "estimate"
+    },
+    "holidayLeave.payoutCapHours.fortyHour": {
+      "label": "Holiday leave paid at separation, 40-hour employee",
+      "value": 240,
+      "unit": "hours of frozen and/or accrued holiday leave",
+      "source": "huntsville-personnel-manual",
+      "citation": "Personnel Manual 8.13",
+      "status": "verified"
+    },
+    "holidayLeave.payoutCapHours.fireSuppression": {
+      "label": "Holiday leave paid at separation, fire suppression",
+      "value": 336,
+      "unit": "hours of frozen and/or accrued holiday leave",
+      "source": "huntsville-personnel-manual",
+      "citation": "Personnel Manual 8.13",
+      "status": "verified"
+    },
+    "compTime.maxHours.fortyHour": {
+      "label": "Most compensatory time a non-exempt 40-hour employee can hold",
+      "value": 240,
+      "unit": "hours; the app assumes the balance is paid at separation at the regular hourly rate (confirm with Human Resources)",
+      "source": "huntsville-personnel-manual",
+      "citation": "Personnel Manual 8.12(A)",
+      "status": "estimate"
+    },
+    "compTime.maxHours.fireSuppression": {
+      "label": "Most compensatory time non-exempt fire suppression can hold",
+      "value": 336,
+      "unit": "hours; the app assumes the balance is paid at separation at the regular hourly rate (confirm with Human Resources)",
+      "source": "huntsville-personnel-manual",
+      "citation": "Personnel Manual 8.12(A)",
+      "status": "estimate"
+    },
+    "leave.payoutRate": {
+      "label": "Payout rate for annual, holiday and compensatory leave",
+      "value": 1,
+      "unit": "share of the regular hourly rate (100%, per user); sick leave is paid at 50% under 10.7(H)",
+      "source": "huntsville-personnel-manual",
+      "citation": "Personnel Manual 8.12, 8.13, 10.6",
+      "status": "user-confirmed"
+    },
+    "deferral.limit": {
+      "label": "457(b) elective deferral limit",
+      "value": { "2026": 24500, "2027": 25500 },
+      "unit": "dollars per calendar year; later years grow with inflation in $500 steps (estimate)",
+      "source": "irs-n-25-67",
+      "citation": "Notice 2025-67; Notice 2026-66 for 2027",
+      "status": "verified"
+    },
+    "deferral.catchUp50": {
+      "label": "Age 50 catch-up (governmental 457(b))",
+      "value": { "2026": 8000, "2027": 8500 },
+      "unit": "dollars per calendar year, for people 50 or older by December 31",
+      "source": "irs-n-25-67",
+      "citation": "Notice 2025-67; Notice 2026-66 for 2027",
+      "status": "verified"
+    },
+    "deferral.catchUp60to63": {
+      "label": "Catch-up for ages 60 to 63",
+      "value": { "2026": 11250, "2027": 11750 },
+      "unit": "dollars per calendar year, replacing the age 50 amount for people who turn 60, 61, 62 or 63 that year, if the plan allows",
+      "source": "irs-n-25-67",
+      "citation": "Notice 2025-67; Notice 2026-66 for 2027",
+      "status": "verified"
+    },
+    "deferral.rothCatchUpWageThreshold": {
+      "label": "Roth catch-up wage threshold",
+      "value": { "2026": 150000, "2027": 155000 },
+      "unit": "prior-year Social Security (FICA) wages; above it, age-based catch-ups must be Roth",
+      "source": "irs-n-25-67",
+      "citation": "Notice 2025-67; Notice 2026-66 for 2027; IRC 414(v)(7)",
+      "status": "verified"
+    },
+    "deferral.specialCatchUp": {
+      "label": "457(b) special catch-up, last 3 years before normal retirement age",
+      "value": 2,
+      "unit": "times the yearly limit at most, or the limit plus unused limit from earlier years, whichever is less. It cannot be used in the same year as the age-based catch-up; the larger one applies",
+      "source": "irs-457-catchup",
+      "citation": "Issue Snapshot: 457(b) catch-up contributions; Treas. Reg. 1.457-4(c)(2)",
+      "status": "verified"
+    },
+    "deferral.postSeverance": {
+      "label": "Deferring leave paid at retirement",
+      "value": "allowed by IRS rules if the plan permits",
+      "unit": "unused bona fide sick, vacation or other leave the employee could have used, paid by the later of 2½ months after separation or the end of that calendar year; counts toward the year's limit. Confirm your plan allows it",
+      "source": "mnretire-post-severance",
+      "citation": "26 CFR 1.415(c)-2(e)(3), as summarized by the Minnesota State Retirement System",
+      "status": "estimate"
+    }
+  }
+}

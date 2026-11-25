@@ -3,6 +3,7 @@
 // "Rules and sources" page. Engine code reads values only through these helpers.
 import rsaErs from '../rules/rsa-ers.json';
 import sources from '../rules/sources.json';
+import leave457 from '../rules/leave-457.json';
 import ssRules from '../rules/social-security.json';
 import taxRules from '../rules/tax.json';
 
@@ -31,7 +32,7 @@ export interface RuleSet {
   rules: Record<string, Rule>;
 }
 
-export const ruleSets: RuleSet[] = [rsaErs as RuleSet, taxRules as RuleSet, ssRules as RuleSet];
+export const ruleSets: RuleSet[] = [rsaErs as RuleSet, taxRules as RuleSet, ssRules as RuleSet, leave457 as RuleSet];
 export const sourceList = (sources as { version: string; sources: Record<string, Source> }).sources;
 
 const all: Record<string, Rule> = Object.fromEntries(

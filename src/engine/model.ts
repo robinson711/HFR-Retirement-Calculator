@@ -23,6 +23,7 @@ import {
 import { compareSickLeave, WORK_SCHEDULES, type SickLeaveComparison, type WorkSchedule } from './sickLeave';
 import { DEFAULT_MORTALITY, estimatedFactors, lifeAnnuity, lifeExpectancy, optionAmounts, type OptionAmount, type SurvivorOption } from './survivor';
 import { claimingFactor, estimatePia, fullRetirementAgeMonths, type PiaEstimate } from './socialSecurity';
+import { deferralRoom, leavePayout, type DeferralRoom } from './leavePayout';
 import { computeTax, type FilingStatus } from './tax';
 
 export const SCHEDULE = schedule as SalarySchedule;
@@ -88,6 +89,17 @@ export interface ScenarioInputs {
   };
   /** Current RSA account (contributions + interest) from the member's statement; null = estimate. */
   rsaAccountBalance: number | null;
+  /** Annual, holiday and compensatory leave paid out at retirement, and how much of it to defer into the 457(b). */
+  leave: {
+    annualHours: number;
+    holidayHours: number;
+    compHours: number;
+    defer: boolean;
+    /** Dollars to defer; 0 = as much as the limit allows. */
+    deferAmount: number;
+    specialCatchUp: boolean;
+    underusedPriorYears: number;
+  };
   plop: { months: number; destination: string | null; per1000Override: number | null };
   survivor: {
     option: SurvivorOption;
@@ -125,6 +137,7 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
       overtimePensionable: true,
       promotions: [],
     },
+    leave: { annualHours: 300, holidayHours: 200, compHours: 0, defer: false, deferAmount: 0, specialCatchUp: false, underusedPriorYears: 0 },
     sickLeave: {
       balanceHours: 800,
       workSchedule: 'fireSuppression',
@@ -381,6 +394,7 @@ export function planInputs(inputs: ScenarioInputs, pension: PensionResult, overr
   const toToday = Math.pow(1 + inputs.assumptions.inflation, -(d.year - startYear));
   // Sick leave cash, after tax, in today's dollars.
   const sickCash = inputs.sickLeave.choice === 'cash' ? pension.sickLeave.cashAfterTax * toToday : 0;
+  const leave = computeLeave(inputs, pension);
   return {
     startYear,
     filing: inputs.filing,
@@ -394,6 +408,8 @@ export function planInputs(inputs: ScenarioInputs, pension: PensionResult, overr
     plopLumpSum: pension.plop.lumpSum * toToday,
     plopDestination: inputs.plop.destination,
     sickLeaveCashAfterTax: sickCash,
+    leaveCashAfterTax: leave.chosen.netCash * toToday,
+    leaveDeferral: leave.chosen.deferred * toToday,
     secondJob: inputs.secondJob.enabled ? { ...inputs.secondJob } : null,
     socialSecurity: resolveSocialSecurity(inputs, pension).benefits,
     expenses: inputs.expenses,
@@ -410,6 +426,85 @@ export interface ScenarioResult {
   projection: Projection;
   sustainable: number;
   monteCarlo: MonteCarloResult;
+}
+
+export interface LeaveScenario {
+  deferred: number;
+  incomeTax: number;
+  fica: number;
+  netCash: number;
+}
+
+export interface LeaveResult {
+  calendarYear: number;
+  hourlyRate: number;
+  payout: ReturnType<typeof leavePayout>;
+  room: DeferralRoom;
+  alreadyDeferred: number;
+  /** Wages and pension already received in the retirement calendar year, nominal. */
+  otherWages: number;
+  otherPension: number;
+  without: LeaveScenario;
+  withDeferral: LeaveScenario;
+  chosen: LeaveScenario;
+}
+
+/**
+ * Leave paid at retirement (nominal dollars of the retirement year), with and without deferring part of it into
+ * the traditional 457(b). Income tax is the extra federal and Alabama tax the payout adds on top of that year's
+ * other pay and pension. Social Security and Medicare tax (7.65%) applies to the whole payout either way, because
+ * 457(b) deferrals are still subject to it.
+ */
+export function computeLeave(inputs: ScenarioInputs, pension: PensionResult): LeaveResult {
+  const d = pension.retirementDate;
+  const schedule = WORK_SCHEDULES[inputs.sickLeave.workSchedule];
+  const last = pension.salary[pension.salary.length - 1];
+  const hourlyRate = (last?.base ?? 0) / schedule.hoursPerYear;
+  const payout = leavePayout(inputs.sickLeave.workSchedule, hourlyRate, inputs.leave);
+  const monthsWorked = d.month - 1;
+  const nominal = Math.pow(1 + inputs.assumptions.inflation, Math.max(0, d.year - inputs.today.year));
+  const yearly457 = inputs.accounts
+    .filter((a) => a.owner === 'member' && !a.notHeld && (a.kind === '457b' || a.kind === 'roth457'))
+    .reduce((s, a) => s + a.contribution, 0);
+  const alreadyDeferred = yearly457 * nominal * (monthsWorked / 12);
+  const otherWages = (last?.gross ?? 0) * (monthsWorked / 12);
+  const otherPension = pension.finalMonthly * (13 - d.month);
+  const prior = pension.salary.find((y) => y.fiscalYear === fiscalYearOf(d) - 1) ?? last;
+  const room = deferralRoom({
+    calendarYear: d.year,
+    ageAtYearEnd: d.year - inputs.member.birth.year,
+    inflation: inputs.assumptions.inflation,
+    alreadyDeferred,
+    specialCatchUp: inputs.leave.specialCatchUp,
+    underusedPriorYears: inputs.leave.underusedPriorYears,
+    priorYearWages: prior?.gross ?? 0,
+  });
+  const taxOn = (wages: number) =>
+    computeTax({ filing: inputs.filing, calendarYear: d.year, over65Count: 0, pension: otherPension, wages, pretaxWithdrawals: 0, socialSecurity: 0, capitalGains: 0, earlyWithdrawalPenaltyBase: 0 }).total;
+  const baseTax = taxOn(otherWages);
+  const fica = inputs.socialSecurity.cityJobCovered ? payout.total * 0.0765 : payout.total * 0.0145;
+  const scenario = (deferred: number): LeaveScenario => {
+    const incomeTax = taxOn(otherWages + payout.total - deferred) - baseTax;
+    return { deferred, incomeTax, fica, netCash: payout.total - deferred - incomeTax - fica };
+  };
+  const wanted = inputs.leave.deferAmount > 0 ? inputs.leave.deferAmount : Infinity;
+  const deferrable = Math.max(0, Math.min(room.room, payout.total - fica, wanted));
+  const without = scenario(0);
+  // Income tax on the cash part is withheld from the payout too, so keep enough cash to cover it.
+  let withDeferral = scenario(deferrable);
+  for (let i = 0; i < 20 && withDeferral.netCash < -0.005; i++) withDeferral = scenario(Math.max(0, withDeferral.deferred + withDeferral.netCash));
+  return {
+    calendarYear: d.year,
+    hourlyRate,
+    payout,
+    room,
+    alreadyDeferred,
+    otherWages,
+    otherPension,
+    without,
+    withDeferral,
+    chosen: inputs.leave.defer ? withDeferral : without,
+  };
 }
 
 export function computeScenario(inputs: ScenarioInputs, paths = inputs.monteCarloPaths): ScenarioResult {

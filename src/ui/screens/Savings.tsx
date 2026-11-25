@@ -1,6 +1,6 @@
 import type { Account, AccountKind } from '../../engine/cashflow';
 import { PRESETS, resolveSocialSecurity, type PresetName, type ScenarioInputs, type ScenarioResult, type SsDetail, type SsPerson } from '../../engine/model';
-import { MoneyField, Note, NumberField, PercentField, Section, SelectField, ShowMath, Toggle } from '../components';
+import { MoneyField, Note, NumberField, PercentField, Section, SelectField, ShowMath, Toggle, WhoBadge } from '../components';
 import { dollars, k, monthly } from '../format';
 import type { Setter } from './You';
 
@@ -28,8 +28,11 @@ export function Savings({ inputs, result, set, onPreset }: { inputs: ScenarioInp
           .map((acc) => {
             const allocSum = acc.allocation.stocks + acc.allocation.bonds + acc.allocation.cash;
             return (
-              <fieldset key={acc.id} className="account">
-                <legend>{acc.label}</legend>
+              <fieldset key={acc.id} className={`account who-${acc.owner === 'spouse' ? 'spouse' : 'you'}`}>
+                <legend>
+                  <WhoBadge who={acc.owner === 'spouse' ? 'spouse' : 'you'} />
+                  {acc.label}
+                </legend>
                 <Toggle label="I don't have this account" checked={!!acc.notHeld} onChange={(notHeld) => setAcc(acc.id, (x) => ({ ...x, notHeld }))} />
                 {!acc.notHeld && (
                   <>
@@ -283,8 +286,11 @@ function DeferredComp({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) 
   const balance = (hasTrad ? (trad?.balance ?? 0) : 0) + (hasRoth ? (roth?.balance ?? 0) : 0);
   const contribution = (hasTrad ? (trad?.contribution ?? 0) : 0) + (hasRoth ? (roth?.contribution ?? 0) : 0);
   return (
-    <fieldset className="account">
-      <legend>457(b) deferred compensation</legend>
+    <fieldset className="account who-you">
+      <legend>
+        <WhoBadge who="you" />
+        457(b) deferred compensation
+      </legend>
       <h4>Traditional (pre-tax)</h4>
       <Toggle label="I don't have a traditional 457(b)" checked={!hasTrad} onChange={(off) => setKind('457b', 'notHeld', off)} />
       {hasTrad && (
@@ -328,8 +334,11 @@ function SocialSecurityPerson({ who, person, detail, set }: { who: 'member' | 's
   const upd = (u: Partial<SsPerson>) => set((s) => ({ ...s, socialSecurity: { ...s.socialSecurity, [who]: { ...s.socialSecurity[who], ...u } } }));
   const fraAge = detail ? `${Math.floor(detail.fraAgeMonths / 12)}${detail.fraAgeMonths % 12 ? ` and ${detail.fraAgeMonths % 12} months` : ''}` : '67';
   return (
-    <fieldset className="account">
-      <legend>{you ? 'Your Social Security' : "Spouse's Social Security"}</legend>
+    <fieldset className={`account who-${you ? 'you' : 'spouse'}`}>
+      <legend>
+        <WhoBadge who={you ? 'you' : 'spouse'} />
+        {you ? 'Your Social Security' : "Spouse's Social Security"}
+      </legend>
       <Toggle label={`Include ${you ? 'your' : "your spouse's"} benefit`} checked={person.include} onChange={(include) => upd({ include })} />
       {person.include && (
         <>
