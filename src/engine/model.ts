@@ -538,6 +538,8 @@ export interface LeaveResult {
   /** Wages and pension already received in the retirement calendar year, nominal. */
   otherWages: number;
   otherPension: number;
+  /** Most that can go into the 457(b) this year while leaving enough cash for the taxes withheld. */
+  maxDeferrable: number;
   without: LeaveScenario;
   withDeferral: LeaveScenario;
   chosen: LeaveScenario;
@@ -591,12 +593,15 @@ export function computeLeave(inputs: ScenarioInputs, pension: PensionResult): Le
     const incomeTax = taxOn(otherWages + payout.total - deferred) - baseTax;
     return { deferred, incomeTax, fica, netCash: payout.total - deferred - incomeTax - fica };
   };
-  const wanted = inputs.leave.deferAmount > 0 ? inputs.leave.deferAmount : Infinity;
-  const deferrable = Math.max(0, Math.min(room.room, payout.total - fica, wanted));
   const without = scenario(0);
   // Income tax on the cash part is withheld from the payout too, so keep enough cash to cover it.
-  let withDeferral = scenario(deferrable);
-  for (let i = 0; i < 20 && withDeferral.netCash < -0.005; i++) withDeferral = scenario(Math.max(0, withDeferral.deferred + withDeferral.netCash));
+  const fit = (wanted: number) => {
+    let r = scenario(Math.max(0, Math.min(room.room, payout.total - fica, wanted)));
+    for (let i = 0; i < 20 && r.netCash < -0.005; i++) r = scenario(Math.max(0, r.deferred + r.netCash));
+    return { ...r, netCash: Math.max(0, r.netCash) };
+  };
+  const withDeferral = fit(inputs.leave.deferAmount > 0 ? inputs.leave.deferAmount : Infinity);
+  const maxDeferrable = fit(Infinity).deferred;
   return {
     calendarYear: d.year,
     hourlyRate,
@@ -605,6 +610,7 @@ export function computeLeave(inputs: ScenarioInputs, pension: PensionResult): Le
     alreadyDeferred,
     otherWages,
     otherPension,
+    maxDeferrable,
     without,
     withDeferral,
     chosen: inputs.leave.defer ? withDeferral : without,

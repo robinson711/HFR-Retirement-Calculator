@@ -77,6 +77,12 @@ export interface DeferralRoom {
   catchUpMustBeRoth: boolean;
   rothThreshold: number;
   estimatedLimits: boolean;
+  /** For explaining the choice: the age catch-up you qualify for, and the special 3-year total if you asked for it. */
+  ageAtYearEnd: number;
+  ageCatchUp: number;
+  ageCatchUpKind: 'none' | 'age50' | 'age60to63';
+  specialTotal: number;
+  priorYearWages: number;
 }
 
 export function deferralRoom(i: DeferralInputs): DeferralRoom {
@@ -84,7 +90,7 @@ export function deferralRoom(i: DeferralInputs): DeferralRoom {
   const c50 = yearly('deferral.catchUp50', i.calendarYear, i.inflation);
   const c60 = yearly('deferral.catchUp60to63', i.calendarYear, i.inflation);
   const threshold = yearly('deferral.rothCatchUpWageThreshold', i.calendarYear, i.inflation);
-  let ageKind: DeferralRoom['catchUpKind'] = 'none';
+  let ageKind: DeferralRoom['ageCatchUpKind'] = 'none';
   let ageCatchUp = 0;
   if (i.ageAtYearEnd >= 60 && i.ageAtYearEnd <= 63) {
     ageKind = 'age60to63';
@@ -108,5 +114,10 @@ export function deferralRoom(i: DeferralInputs): DeferralRoom {
     catchUpMustBeRoth: !useSpecial && ageCatchUp > 0 && i.priorYearWages > threshold.value,
     rothThreshold: threshold.value,
     estimatedLimits: !(base.published && c50.published && c60.published),
+    ageAtYearEnd: i.ageAtYearEnd,
+    ageCatchUp,
+    ageCatchUpKind: ageKind,
+    specialTotal: special,
+    priorYearWages: i.priorYearWages,
   };
 }
