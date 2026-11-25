@@ -1,6 +1,7 @@
 import { useDeferredValue, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { computeScenario } from '../engine/model';
 import { Disclaimer } from './Disclaimer';
+import { openSectionContaining } from './components';
 import { k, monthly, pct, ym } from './format';
 import { Compare } from './screens/Compare';
 import { Pension } from './screens/Pension';
@@ -125,9 +126,13 @@ export function App() {
                 setTab('you');
                 // Wait for the You tab to render, then take the user to the setting.
                 setTimeout(() => {
-                  const el = document.getElementById('work-schedule');
-                  el?.scrollIntoView({ block: 'center' });
-                  el?.focus();
+                  // Open its section first in case the user collapsed it.
+                  openSectionContaining(document.getElementById('work-schedule'));
+                  setTimeout(() => {
+                    const el = document.getElementById('work-schedule');
+                    el?.scrollIntoView({ block: 'center' });
+                    el?.focus();
+                  }, 0);
                 }, 0);
               }}
             />

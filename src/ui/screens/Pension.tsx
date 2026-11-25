@@ -117,7 +117,7 @@ export function Pension({ inputs, result, set, onEditSchedule }: { inputs: Scena
         </details>
       </Section>
 
-      <Section title="PLOP (partial lump sum)" who="you">
+      <Section title="PLOP (partial lump sum)" who="you" notApplicable={inputs.plop.months === 0 ? "You're not taking a PLOP (0 months)." : undefined}>
         <NumberField
           label="Months of the Maximum to take as a lump sum (0 = none)"
           value={inputs.plop.months}
