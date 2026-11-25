@@ -1,0 +1,134 @@
+{
+  "id": "tax",
+  "version": "2026-11-25",
+  "rules": {
+    "federal.year": {
+      "label": "Federal tax year of the figures below",
+      "value": 2026,
+      "unit": "tax year; later years are indexed by the inflation assumption",
+      "source": "irs-2026",
+      "citation": "Rev. Proc. 2025-32",
+      "status": "verified"
+    },
+    "federal.brackets.mfj": {
+      "label": "2026 federal brackets, married filing jointly",
+      "value": [[0, 0.1], [24800, 0.12], [100800, 0.22], [211400, 0.24], [403550, 0.32], [512450, 0.35], [768700, 0.37]],
+      "unit": "[taxable income floor, rate]",
+      "source": "irs-2026",
+      "citation": "Rev. Proc. 2025-32 section 4.01, Table 1",
+      "status": "verified"
+    },
+    "federal.brackets.single": {
+      "label": "2026 federal brackets, single",
+      "value": [[0, 0.1], [12400, 0.12], [50400, 0.22], [105700, 0.24], [201775, 0.32], [256225, 0.35], [640600, 0.37]],
+      "unit": "[taxable income floor, rate]",
+      "source": "irs-2026",
+      "citation": "Rev. Proc. 2025-32 section 4.01, Table 3",
+      "status": "verified"
+    },
+    "federal.standardDeduction": {
+      "label": "2026 federal standard deduction",
+      "value": { "mfj": 32200, "single": 16100 },
+      "unit": "$",
+      "source": "irs-2026",
+      "citation": "Rev. Proc. 2025-32 section 4.14(1)",
+      "status": "verified"
+    },
+    "federal.additionalAged": {
+      "label": "2026 additional standard deduction, age 65+",
+      "value": { "married": 1650, "unmarried": 2050 },
+      "unit": "$ per qualifying person",
+      "source": "irs-2026",
+      "citation": "Rev. Proc. 2025-32 section 4.14(3)",
+      "status": "verified"
+    },
+    "federal.seniorDeduction": {
+      "label": "Enhanced deduction for seniors (age 65+), tax years 2025-2028",
+      "value": { "amount": 6000, "phaseOutSingle": 75000, "phaseOutJoint": 150000, "phaseOutRate": 0.06, "lastYear": 2028 },
+      "unit": "$ per eligible person; phase-out rate of 6% of MAGI over the threshold is not stated on the IRS page and is an estimate",
+      "source": "irs-senior-deduction",
+      "citation": "IRS, Check your eligibility for the new enhanced deduction for seniors (Feb 27, 2026)",
+      "status": "estimate"
+    },
+    "federal.capitalGains": {
+      "label": "2026 long-term capital gains: top of the 0% and 15% brackets (taxable income)",
+      "value": { "mfj": [98900, 613700], "single": [49450, 545500] },
+      "unit": "$",
+      "source": "irs-2026",
+      "citation": "Rev. Proc. 2025-32 section 4.03",
+      "status": "verified"
+    },
+    "federal.socialSecurityTaxable": {
+      "label": "Taxable share of Social Security",
+      "value": { "base1": { "mfj": 32000, "single": 25000 }, "base2": { "mfj": 44000, "single": 34000 } },
+      "unit": "provisional income thresholds (not indexed); up to 85% taxable",
+      "source": "irs-pub-915",
+      "citation": "IRC section 86; IRS Publication 915",
+      "status": "estimate"
+    },
+    "federal.457bNoPenalty": {
+      "label": "457(b) withdrawals after separation have no 10% early withdrawal penalty",
+      "value": true,
+      "unit": "",
+      "source": "irs-457b",
+      "citation": "IRS, IRC 457(b) Deferred Compensation Plans: 457(b) distributions are not subject to the 10% additional tax",
+      "status": "estimate"
+    },
+    "alabama.rates": {
+      "label": "Alabama income tax rates",
+      "value": { "mfj": [[0, 0.02], [1000, 0.04], [6000, 0.05]], "single": [[0, 0.02], [500, 0.04], [3000, 0.05]] },
+      "unit": "[taxable income floor, rate]",
+      "source": "al-rates",
+      "citation": "Alabama DOR FAQ: What is Alabama's individual income tax rate?",
+      "status": "verified"
+    },
+    "alabama.personalExemption": {
+      "label": "Alabama personal exemption",
+      "value": { "mfj": 3000, "single": 1500 },
+      "unit": "$",
+      "source": "al-rates",
+      "citation": "Alabama DOR FAQ: individual income tax rate",
+      "status": "verified"
+    },
+    "alabama.standardDeduction": {
+      "label": "Alabama standard deduction (lowest amount after the income phase-down)",
+      "value": { "mfj": 5000, "single": 2500 },
+      "unit": "$; the full chart starts higher at low incomes, so this slightly overstates tax for low-income years",
+      "source": "al-form40-2024",
+      "citation": "Form 40 Booklet (2024), standard deduction chart, p.9",
+      "status": "estimate"
+    },
+    "alabama.exemptIncome": {
+      "label": "Alabama exempts ERS pensions and Social Security",
+      "value": ["ers-pension", "social-security"],
+      "unit": "",
+      "source": "al-exempt-income",
+      "citation": "Income Exempt from Alabama Income Taxation; Form 40 booklet p.7",
+      "status": "verified"
+    },
+    "alabama.retirementExclusion": {
+      "label": "Alabama retirement income exclusion at age 65+ (IRA, 457(b), annuities)",
+      "value": 6000,
+      "unit": "$ per taxpayer age 65+; 457(b) coverage inferred from 'other distributions'",
+      "source": "al-schedule-rs",
+      "citation": "Act 2022-294; Schedule RS (2025) lines 10-11",
+      "status": "verified"
+    },
+    "alabama.federalTaxDeduction": {
+      "label": "Federal income tax paid is deductible on the Alabama return",
+      "value": true,
+      "unit": "",
+      "source": "al-form40-2024",
+      "citation": "Form 40 Booklet (2024), line 12",
+      "status": "verified"
+    },
+    "alabama.capitalGains": {
+      "label": "Alabama taxes capital gains as ordinary income",
+      "value": true,
+      "unit": "",
+      "source": "al-form40-2024",
+      "citation": "Form 40 Booklet (2024), p.7 and line 3",
+      "status": "verified"
+    }
+  }
+}
