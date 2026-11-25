@@ -1,4 +1,4 @@
-import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension, inServiceDeathEligibility } from '../model';
+import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension, inServiceDeathEligibility, planInputs } from '../model';
 
 describe('scenario model', () => {
   const inputs = defaultInputs();
@@ -66,5 +66,16 @@ describe('comparisons', () => {
       const values = c.variants.map((v) => Math.round(v.sustainable));
       expect(new Set(values).size).toBe(values.length);
     }
+  });
+});
+
+describe("accounts the member doesn't have", () => {
+  it('count as zero balance and zero contributions', () => {
+    const inputs = defaultInputs({ year: 2026, month: 11 });
+    const without = { ...inputs, accounts: inputs.accounts.map((a) => (a.id === 'roth' ? { ...a, notHeld: true } : a)) };
+    const roth = planInputs(without, computePension(without)).accounts.find((a) => a.id === 'roth')!;
+    expect(roth.balance).toBe(0);
+    expect(roth.contribution).toBe(0);
+    expect(computeScenario(without, 20).sustainable).toBeLessThan(computeScenario(inputs, 20).sustainable);
   });
 });

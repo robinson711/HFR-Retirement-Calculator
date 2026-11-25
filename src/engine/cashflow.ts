@@ -26,6 +26,13 @@ export interface Account {
   allocation: Allocation;
   /** Taxable accounts: cost basis as a share of the balance. */
   basisPct?: number;
+  /** The member said they don't have this account: it counts as zero. */
+  notHeld?: boolean;
+}
+
+/** Accounts as the projection sees them: any the member doesn't have count as zero. */
+export function heldAccounts(accounts: Account[]): Account[] {
+  return accounts.map((a) => (a.notHeld ? { ...a, balance: 0, contribution: 0 } : a));
 }
 
 export interface Assumptions {
