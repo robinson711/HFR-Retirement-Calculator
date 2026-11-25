@@ -27,7 +27,12 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
           hint="Huntsville elected Tier I benefits for Tier II members under Act 2022-348."
         />
         <MonthYearField label="Birth month and year" value={inputs.member.birth} onChange={(birth) => set((s) => ({ ...s, member: { ...s.member, birth } }))} />
-        <MonthYearField label="Hire month and year" value={inputs.member.hire} onChange={(hire) => set((s) => ({ ...s, member: { ...s.member, hire } }))} />
+        <MonthYearField
+          label="RSA service start (month and year)"
+          value={inputs.member.hire}
+          onChange={(hire) => set((s) => ({ ...s, member: { ...s.member, hire } }))}
+          hint="Usually your hire month, but RSA may start counting a month or two later, when contributions began. Use the date from your RSA statement or estimate letter if you have it."
+        />
         <Toggle
           label="Stress bill credit applies"
           checked={inputs.member.stressCredit && !tier2}
