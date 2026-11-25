@@ -107,7 +107,7 @@ export function App() {
       <main id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className={stale ? 'stale' : ''} tabIndex={-1}>
         {tab === 'you' && <You inputs={inputs} set={set} />}
         {tab === 'pension' && <Pension inputs={inputs} result={result} set={set} />}
-        {tab === 'savings' && <Savings inputs={inputs} set={set} onPreset={(preset) => dispatch({ type: 'preset', preset })} />}
+        {tab === 'savings' && <Savings inputs={inputs} result={result} set={set} onPreset={(preset) => dispatch({ type: 'preset', preset })} />}
         {tab === 'plan' && <Plan inputs={deferred} result={result} />}
         {tab === 'compare' && <Compare inputs={deferred} />}
         {tab === 'survivors' && <Survivors inputs={deferred} result={result} />}

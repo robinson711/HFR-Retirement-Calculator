@@ -5,7 +5,8 @@
   "source": "City of Huntsville, PUBLIC SAFETY SALARY SCHEDULE, effective November 23, 2026 (PDF supplied by user)",
   "hoursPerYearFireSuppression": 2912,
   "hoursPerYearFortyHour": 2080,
-  "note": "Annual salary by grade and step. Replace this file each year with the new schedule. The schedule PDF lists hourly as annual / 2,080. Fire suppression hourly pay is annual / 2,912 (Personnel Manual 8.8).",
+  "colaNotInSchedule": 0.02,
+  "note": "Annual salary by grade and step. Replace this file each year with the new schedule. The schedule PDF lists hourly as annual / 2,080. Fire suppression hourly pay is annual / 2,912 (Personnel Manual 8.8). colaNotInSchedule is the 2% raise granted in 2026 that this file does not show; the app adds it to every rate. Set it to 0 when the new schedule already includes it.",
   "grades": {
     "13P": [
       57033.6,

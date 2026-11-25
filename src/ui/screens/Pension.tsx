@@ -1,4 +1,4 @@
-import { deathByYear, plopCumulative, type ScenarioInputs, type ScenarioResult } from '../../engine/model';
+import { deathByYear, inServiceDeathEligibility, plopCumulative, type ScenarioInputs, type ScenarioResult } from '../../engine/model';
 import { plopLimits } from '../../engine/plop';
 import { OPTION_LABELS, type SurvivorOption } from '../../engine/survivor';
 import { PlopChart, PurchasingPowerChart } from '../charts';
@@ -12,7 +12,7 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
   const sl = p.sickLeave;
   const limits = plopLimits(p.maximum.monthly);
   const death = deathByYear(inputs, p);
-  const firstEligible = death.find((d) => d.eligible);
+  const deathElig = inServiceDeathEligibility(inputs, p);
   const maxGap = Math.max(0, ...death.map((d) => d.gap));
   const stocks = a.returns.stocks.mean;
   const plopCurve = plopCumulative(p, stocks, a.inflation, a.longevityAge);
@@ -33,17 +33,12 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
         <KeyNumber label="Maximum benefit" value={monthly(p.maximum.monthly)} sub="Before any survivor option or PLOP" />
       </div>
       {!p.eligibility.eligible && <Note kind="warn">Not eligible to retire on this date: {p.eligibility.reason}.</Note>}
-      {inputs.pay.fitnessIncentivePct > 0 && (
-        <Note kind="warn">
-          Your final 3 fiscal years ({p.fitnessFlagYears.join(', ')}) set your average salary. The 5% fitness incentive only counts while you keep passing the Physical Capabilities Drill.
-        </Note>
-      )}
       <Assumptions
         items={[
           ['Average final salary', `${dollars(p.maximum.afs)}: highest ${p.afsYears.length} of the last 10 fiscal years`],
           ['Benefit factor', pct(p.maximum.factor, 4)],
           ['Service credit', `${years(p.service.actualMonths)} actual + ${years(p.service.sickLeaveMonths)} sick leave + ${years(p.service.stressMonths)} stress credit`],
-          ['Pay', `Schedule COLA ${pct(inputs.pay.scheduleColaPct)} a year, one step a year, fitness incentive ${pct(inputs.pay.fitnessIncentivePct)}`],
+          ['Pay', `Schedule COLA ${pct(inputs.pay.scheduleColaPct)} a year, one step a year, ${inputs.pay.fitnessIncentive ? 'fitness incentive 5%' : 'no fitness incentive'}, 2% raise added to the FY2027 schedule`],
           ['Survivor option', p.chosen.basis === 'letter' ? 'From your RSA estimate letter' : 'Rough estimate (enter your letter below for the exact figure)'],
         ]}
       />
@@ -161,16 +156,36 @@ export function Pension({ inputs, result, set }: { inputs: ScenarioInputs; resul
 
       <Section title="If you die before you can retire">
         <p>
-          Before retirement eligibility, your beneficiary gets your contributions plus interest and one year of salary, not a pension.{' '}
-          {firstEligible ? `From ${firstEligible.year}, your spouse could take a lifetime Option 2 benefit instead.` : ''} The largest gap is about{' '}
-          <strong>{k(maxGap)}</strong>. Term life insurance in about that amount, ending at eligibility, would fill it.
+          Before retirement eligibility, your beneficiary gets your contributions plus interest and one year of salary, not a pension.
+          {maxGap > 0 && (
+            <>
+              {' '}
+              The largest gap is about <strong>{k(maxGap)}</strong>. Term life insurance in about that amount, ending at eligibility, would fill it.
+            </>
+          )}
         </p>
+        {deathElig && (
+          <Note>
+            From <strong>{ym(deathElig.date)}</strong>, if you die while still working, your spouse could take a lifetime Option 2 benefit of about{' '}
+            <strong>{monthly(deathElig.survivorMonthly)}</strong> a month (a rough estimate), figured like a normal retirement on that date.
+            {deathElig.viaStressCredit && (
+              <>
+                {' '}
+                Stress credit gets you there early: {years(deathElig.actualMonths)} of actual service plus {years(deathElig.stressMonths)} of stress credit makes 25 years.
+              </>
+            )}{' '}
+            After that the benefit keeps growing with your pay and service, as in the table below.
+          </Note>
+        )}
         <Table
           caption="Death benefit by year"
           head={['Year', 'Your age', 'Eligible?', 'Lump sum', 'Spouse pension', 'Gap to fill']}
           rows={death.map((d) => [String(d.year), String(d.age), d.eligible ? 'Yes' : 'No', k(d.lumpSum), d.survivorMonthly > 0 ? `${monthly(d.survivorMonthly)}/mo` : 'None', d.gap > 0 ? k(d.gap) : '—'])}
         />
-        <Note>Stress credit counts toward eligibility for an in-service death. Confirm survivor benefits with RSA.</Note>
+        <Note>
+          ERS Handbook p.16: hazardous duty (stress) credit counts toward retirement eligibility for an in-service death of a firefighter. Sick leave is not
+          counted here, because it converts only at retirement. Confirm survivor benefits with RSA.
+        </Note>
       </Section>
 
       <Section title="Pension after retirement">

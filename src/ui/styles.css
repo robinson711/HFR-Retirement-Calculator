@@ -122,8 +122,8 @@ h3 { font-size: 1rem; margin: 16px 0 8px; }
 .toggle label { font-weight: 600; }
 .toggle .hint { grid-column: 2; }
 .hint { color: var(--muted); font-size: 0.86rem; margin-top: 4px; }
-fieldset.account { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; }
-fieldset.account legend { font-weight: 700; padding: 0 4px; }
+fieldset.account, fieldset.promotion { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; }
+fieldset.account legend, fieldset.promotion legend { font-weight: 700; padding: 0 4px; }
 
 .note { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); font-size: 0.93rem; }
 .note.warn { background: var(--warn-bg); color: var(--text); border-color: var(--warn); }
@@ -187,3 +187,6 @@ tbody th { font-weight: 500; }
   .card, .key, .chart { break-inside: avoid; }
   .table-wrap { max-height: none; overflow: visible; }
 }
+.promotion-result { margin: 4px 0 8px; }
+fieldset.account h4 { margin: 10px 0 4px; font-size: 0.95rem; }
+.total-line { margin: 8px 0; }

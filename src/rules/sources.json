@@ -90,6 +90,36 @@
       "publisher": "Alabama Department of Revenue / Alabama Legislature",
       "url": "https://www.revenue.alabama.gov/wp-content/uploads/2026/01/25schrsblk.pdf",
       "asOf": "2026-01-01"
+    },
+    "ssa-cola-2026": {
+      "title": "2026 Cost-of-Living Adjustment (COLA) Fact Sheet",
+      "publisher": "Social Security Administration",
+      "url": "https://www.ssa.gov/news/en/cola/factsheets/2026.html",
+      "asOf": "2026-11-25"
+    },
+    "ssa-autoadj": {
+      "title": "Automatic Determinations in Recent Years",
+      "publisher": "Social Security Administration",
+      "url": "https://www.ssa.gov/oact/cola/autoAdj.html",
+      "asOf": "2026-11-25"
+    },
+    "ssa-apnc-2025": {
+      "title": "Annual Statistical Supplement, 2025, Appendix C: Computing a Retired-Worker Benefit",
+      "publisher": "Social Security Administration",
+      "url": "https://www.ssa.gov/policy/docs/statcomps/supplement/2025/apnc.html",
+      "asOf": "2026-11-25"
+    },
+    "ssa-nra": {
+      "title": "Normal Retirement Age",
+      "publisher": "Social Security Administration",
+      "url": "https://www.ssa.gov/oact/ProgData/nra.html",
+      "asOf": "2026-11-25"
+    },
+    "ssa-early-late": {
+      "title": "Early or Late Retirement",
+      "publisher": "Social Security Administration",
+      "url": "https://www.ssa.gov/oact/quickcalc/early_late.html",
+      "asOf": "2026-11-25"
     }
   }
 }

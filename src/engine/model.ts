@@ -22,6 +22,7 @@ import {
 } from './service';
 import { compareSickLeave, SHIFT_ACCRUAL_HOURS_PER_YEAR, type SickLeaveComparison } from './sickLeave';
 import { DEFAULT_MORTALITY, estimatedFactors, lifeAnnuity, lifeExpectancy, optionAmounts, type OptionAmount, type SurvivorOption } from './survivor';
+import { claimingFactor, estimatePia, fullRetirementAgeMonths, type PiaEstimate } from './socialSecurity';
 import { computeTax, type FilingStatus } from './tax';
 
 export const SCHEDULE = schedule as SalarySchedule;
@@ -43,6 +44,22 @@ export const PRESETS: Record<PresetName, Omit<Assumptions, 'longevityAge' | 'pen
   },
 };
 
+export interface SsPerson {
+  include: boolean;
+  claimAge: number;
+  /** 'statement': the full-retirement-age amount from the SSA statement. 'estimate': a rough estimate from earnings. */
+  source: 'statement' | 'estimate';
+  /** Monthly benefit at full retirement age from the SSA statement, today's dollars. */
+  fraMonthly: number;
+  /** Estimate: years already worked in jobs that paid Social Security tax. */
+  pastYears: number;
+  /** Estimate: average yearly earnings in those years, today's dollars. */
+  pastAverage: number;
+  /** Spouse estimate only: yearly earnings now, and the age they stop working. The member's future pay comes from the pay path. */
+  currentEarnings: number;
+  stopAge: number;
+}
+
 export interface ScenarioInputs {
   today: YearMonth;
   filing: FilingStatus;
@@ -50,14 +67,11 @@ export interface ScenarioInputs {
   pay: {
     grade: string;
     step: number;
-    missingColaPct: number;
     scheduleColaPct: number;
-    fitnessIncentivePct: number;
-    fitnessStopsFiscalYear: number | null;
+    fitnessIncentive: boolean;
     overtimeAnnual: number;
     overtimePensionable: boolean;
     promotions: Promotion[];
-    promotionRaisePerGrade: number;
   };
   sickLeave: {
     balanceHours: number;
@@ -65,7 +79,6 @@ export interface ScenarioInputs {
     usedHoursPerYear: number;
     hoursPerDay: number;
     choice: 'cash' | 'credit';
-    capMonths: number;
     cashPct: number;
   };
   retirement: {
@@ -87,8 +100,10 @@ export interface ScenarioInputs {
   withdrawalOrder: AccountKind[];
   secondJob: { enabled: boolean; annual: number; endAge: number; rsaEmployer: boolean; fullTime: boolean };
   socialSecurity: {
-    member: { monthly: number; claimAge: number } | null;
-    spouse: { monthly: number; claimAge: number } | null;
+    /** Whether the City job withholds Social Security (OASDI) tax. */
+    cityJobCovered: boolean;
+    member: SsPerson;
+    spouse: SsPerson;
   };
   expenses: { core: number; healthPre65: number; healthPost65: number; mortgageAnnual: number; mortgagePayoffYear: number };
   preset: PresetName;
@@ -104,14 +119,11 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
     pay: {
       grade: '15P',
       step: 10,
-      missingColaPct: 0.02,
       scheduleColaPct: 0.02,
-      fitnessIncentivePct: 0.05,
-      fitnessStopsFiscalYear: null,
+      fitnessIncentive: true,
       overtimeAnnual: 0,
       overtimePensionable: true,
       promotions: [],
-      promotionRaisePerGrade: 0.05,
     },
     sickLeave: {
       balanceHours: 800,
@@ -119,7 +131,6 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
       usedHoursPerYear: 0,
       hoursPerDay: 11.2,
       choice: 'cash',
-      capMonths: 36,
       cashPct: 0.5,
     },
     retirement: { targetServiceYears: 25, dateOverride: null },
@@ -132,14 +143,19 @@ export function defaultInputs(today: YearMonth = { year: 2026, month: 11 }): Sce
       letter: { maximum: null, option1: null, option2: null, option3: null, option4: null },
     },
     accounts: [
-      { id: '457b', label: '457(b) deferred compensation', kind: '457b', owner: 'member', balance: 50000, contribution: 6000, allocation: { stocks: 0.8, bonds: 0.2, cash: 0 } },
+      { id: '457b', label: '457(b) traditional', kind: '457b', owner: 'member', balance: 50000, contribution: 6000, allocation: { stocks: 0.8, bonds: 0.2, cash: 0 } },
+      { id: '457b-roth', label: '457(b) Roth', kind: 'roth457', owner: 'member', balance: 0, contribution: 0, allocation: { stocks: 0.8, bonds: 0.2, cash: 0 } },
       { id: 'spouse', label: 'Spouse TSP / IRA', kind: 'pretax', owner: 'spouse', balance: 20000, contribution: 3000, allocation: { stocks: 0.8, bonds: 0.2, cash: 0 } },
       { id: 'taxable', label: 'Taxable brokerage', kind: 'taxable', owner: 'member', balance: 10000, contribution: 1200, allocation: { stocks: 0.7, bonds: 0.2, cash: 0.1 }, basisPct: 0.8 },
       { id: 'roth', label: 'Roth IRA', kind: 'roth', owner: 'member', balance: 15000, contribution: 3000, allocation: { stocks: 1, bonds: 0, cash: 0 } },
     ],
-    withdrawalOrder: ['taxable', '457b', 'pretax', 'roth'],
+    withdrawalOrder: ['taxable', '457b', 'pretax', 'roth457', 'roth'],
     secondJob: { enabled: false, annual: 40000, endAge: 62, rsaEmployer: false, fullTime: true },
-    socialSecurity: { member: { monthly: 1500, claimAge: 67 }, spouse: { monthly: 1500, claimAge: 67 } },
+    socialSecurity: {
+      cityJobCovered: true,
+      member: { include: true, claimAge: 67, source: 'estimate', fraMonthly: 0, pastYears: 12, pastAverage: 55000, currentEarnings: 0, stopAge: 62 },
+      spouse: { include: true, claimAge: 67, source: 'estimate', fraMonthly: 0, pastYears: 10, pastAverage: 45000, currentEarnings: 50000, stopAge: 62 },
+    },
     expenses: { core: 60000, healthPre65: 14000, healthPost65: 7000, mortgageAnnual: 18000, mortgagePayoffYear: 2045 },
     preset: 'base',
     assumptions: { ...PRESETS.base, longevityAge: 95, pensionCola: 0 },
@@ -179,7 +195,7 @@ function sickHoursAt(inputs: ScenarioInputs, date: YearMonth): number {
 
 function sickCreditAt(inputs: ScenarioInputs, date: YearMonth): number {
   if (inputs.sickLeave.choice !== 'credit' || inputs.member.tier === 'tier2') return 0;
-  return sickLeaveCreditMonths(shiftHoursToDays(sickHoursAt(inputs, date), inputs.sickLeave.hoursPerDay), inputs.sickLeave.capMonths);
+  return sickLeaveCreditMonths(shiftHoursToDays(sickHoursAt(inputs, date), inputs.sickLeave.hoursPerDay));
 }
 
 /** Retirement date: the override, or the first month with the target service that is also eligible. */
@@ -271,7 +287,6 @@ export function computePension(inputs: ScenarioInputs, dateOverride?: YearMonth)
     marginalTaxRate: marginal,
     afs,
     benefitFactor: rules.benefitFactor,
-    capMonths: inputs.sickLeave.capMonths,
     lifeAnnuityFactor: lifeAnnuity({ ...DEFAULT_MORTALITY, discountRate: inputs.assumptions.inflation + 0.02 }, age),
   });
 
@@ -301,6 +316,66 @@ export function computePension(inputs: ScenarioInputs, dateOverride?: YearMonth)
   };
 }
 
+export interface SsDetail {
+  /** Monthly benefit at full retirement age, today's dollars. */
+  fraMonthly: number;
+  /** Multiplier for the claiming age. */
+  factor: number;
+  /** Monthly benefit at the claiming age, today's dollars. */
+  monthly: number;
+  fraAgeMonths: number;
+  estimate: PiaEstimate | null;
+  /** Yearly earnings the estimate used, today's dollars. */
+  earnings: number[];
+}
+
+/**
+ * Social Security for the member and spouse, in today's dollars at each claiming age. From the SSA statement's
+ * full-retirement-age amount, or a rough estimate: past covered years at their average, plus the member's City pay
+ * (if covered) until retirement and any second job, or the spouse's current earnings until they stop working.
+ */
+export function resolveSocialSecurity(
+  inputs: ScenarioInputs,
+  pension: PensionResult,
+): { benefits: { member: { monthly: number; claimAge: number } | null; spouse: { monthly: number; claimAge: number } | null }; member: SsDetail | null; spouse: SsDetail | null } {
+  const ss = inputs.socialSecurity;
+  const currentFY = fiscalYearOf(inputs.today);
+  const detail = (p: SsPerson, birthYear: number, future: number[]): SsDetail | null => {
+    if (!p.include) return null;
+    const factor = claimingFactor(birthYear, p.claimAge);
+    const fraAgeMonths = fullRetirementAgeMonths(birthYear);
+    if (p.source === 'statement') return { fraMonthly: p.fraMonthly, factor, monthly: p.fraMonthly * factor, fraAgeMonths, estimate: null, earnings: [] };
+    const earnings = [...Array<number>(Math.max(0, Math.round(p.pastYears))).fill(p.pastAverage), ...future];
+    const estimate = estimatePia(earnings);
+    return { fraMonthly: estimate.pia, factor, monthly: estimate.pia * factor, fraAgeMonths, estimate, earnings };
+  };
+  // Member: City pay from next fiscal year until retirement, in today's dollars, then any second job.
+  const memberFuture: number[] = [];
+  if (ss.cityJobCovered) {
+    const retFY = fiscalYearOf(pension.retirementDate);
+    for (const y of pension.salary) {
+      if (y.fiscalYear <= currentFY || y.fiscalYear >= retFY) continue;
+      memberFuture.push(y.gross / Math.pow(1 + inputs.pay.scheduleColaPct, y.fiscalYear - currentFY));
+    }
+  }
+  if (inputs.secondJob.enabled) {
+    const years = Math.max(0, Math.round(inputs.secondJob.endAge - pension.ageAtRetirement));
+    for (let i = 0; i < years; i++) memberFuture.push(inputs.secondJob.annual);
+  }
+  const spouseAge = monthsBetween(inputs.survivor.beneficiaryBirth, inputs.today) / 12;
+  const spouseFuture = Array<number>(Math.max(0, Math.round(ss.spouse.stopAge - spouseAge))).fill(ss.spouse.currentEarnings);
+  const member = detail(ss.member, inputs.member.birth.year, memberFuture);
+  const spouse = detail(ss.spouse, inputs.survivor.beneficiaryBirth.year, spouseFuture);
+  return {
+    benefits: {
+      member: member && member.monthly > 0 ? { monthly: member.monthly, claimAge: ss.member.claimAge } : null,
+      spouse: spouse && spouse.monthly > 0 ? { monthly: spouse.monthly, claimAge: ss.spouse.claimAge } : null,
+    },
+    member,
+    spouse,
+  };
+}
+
 export function planInputs(inputs: ScenarioInputs, pension: PensionResult, overrides: Partial<PlanInputs> = {}): PlanInputs {
   const startYear = inputs.today.year + 1;
   const d = pension.retirementDate;
@@ -321,7 +396,7 @@ export function planInputs(inputs: ScenarioInputs, pension: PensionResult, overr
     plopDestination: inputs.plop.destination,
     sickLeaveCashAfterTax: sickCash,
     secondJob: inputs.secondJob.enabled ? { ...inputs.secondJob } : null,
-    socialSecurity: inputs.socialSecurity,
+    socialSecurity: resolveSocialSecurity(inputs, pension).benefits,
     expenses: inputs.expenses,
     accounts: inputs.accounts,
     withdrawalOrder: inputs.withdrawalOrder,
@@ -361,6 +436,45 @@ export interface DeathRow {
   survivorMonthly: number;
   /** Value of the survivor pension the family would get by waiting for eligibility, minus the lump sum. */
   gap: number;
+}
+
+export interface InServiceDeathEligibility {
+  /** First month a death in service would let the spouse take a lifetime Option 2 benefit. */
+  date: YearMonth;
+  actualMonths: number;
+  stressMonths: number;
+  /** Rough Option 2 monthly benefit to the spouse for a death in that month, today's dollars. */
+  survivorMonthly: number;
+  /** True when stress credit is what makes the member eligible before actual service alone would. */
+  viaStressCredit: boolean;
+}
+
+/**
+ * ERS Handbook p.16: hazardous duty (stress) credit counts toward retirement eligibility for an in-service death of
+ * a firefighter. With Tier 1 rules, about 20 years 10 months of actual service plus 4 years 2 months of stress credit
+ * reaches 25 years, so the spouse could take a lifetime Option 2 benefit from then on.
+ */
+export function inServiceDeathEligibility(inputs: ScenarioInputs, pension: PensionResult): InServiceDeathEligibility | null {
+  const member = { ...inputs.member, sickLeaveMonths: 0 };
+  const start = toIndex(inputs.today);
+  const end = toIndex(pension.retirementDate);
+  for (let i = start; i <= end; i++) {
+    const date = fromIndex(i);
+    const s = serviceAt(member, date);
+    if (!eligibility(inputs.member.tier, { ...s, eligibilityMonths: s.eligibilityMonths + s.stressMonths }).eligible) continue;
+    const rules = tierRules(inputs.member.tier);
+    const spouseAge = ageYears(inputs.survivor.beneficiaryBirth, pension.retirementDate);
+    const option2 = estimatedFactors(pension.ageAtRetirement, spouseAge, pension.maximum.monthly, pension.annuitySavings).option2;
+    const maxAtDate = (pension.maximum.afs * (s.creditedMonths / 12) * rules.benefitFactor) / 12;
+    return {
+      date,
+      actualMonths: s.actualMonths,
+      stressMonths: s.stressMonths,
+      survivorMonthly: maxAtDate * option2,
+      viaStressCredit: !eligibility(inputs.member.tier, s).eligible,
+    };
+  }
+  return null;
 }
 
 export function deathByYear(inputs: ScenarioInputs, pension: PensionResult): DeathRow[] {
@@ -412,28 +526,59 @@ export function deathByYear(inputs: ScenarioInputs, pension: PensionResult): Dea
 // Survivor view: spouse income if the member dies at different points.
 
 export interface SurvivorRow {
+  /** When the firefighter dies, in plain words. */
   scenario: string;
   option: SurvivorOption;
+  /** What the spouse receives, in plain words. */
+  explain: string;
   pensionMonthly: number;
   lumpSum: number;
   socialSecurityMonthly: number;
 }
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const OPTION_EXPLAIN: Record<SurvivorOption, string> = {
+  maximum: 'Your pension stops. Your spouse gets nothing more from RSA.',
+  option1: 'Your pension stops. Your spouse gets whatever is left of your annuity savings, once.',
+  option2: 'Your spouse keeps getting your same monthly pension for life.',
+  option3: 'Your spouse gets half of your monthly pension for life.',
+  option4: 'Your spouse gets the amount set in your custom option.',
+};
+
 export function survivorView(inputs: ScenarioInputs, pension: PensionResult, death: DeathRow[]): SurvivorRow[] {
   const rows: SurvivorRow[] = [];
-  const ss = inputs.socialSecurity;
+  const ss = resolveSocialSecurity(inputs, pension).benefits;
   const widowSS = Math.max(ss.member?.monthly ?? 0, ss.spouse?.monthly ?? 0);
   const firstPre = death.find((d) => !d.eligible);
   if (firstPre) {
-    rows.push({ scenario: `Dies before eligibility (e.g. ${firstPre.year})`, option: 'maximum', pensionMonthly: 0, lumpSum: firstPre.lumpSum, socialSecurityMonthly: widowSS });
+    rows.push({
+      scenario: `You die while still working, before you could retire (e.g. ${firstPre.year})`,
+      option: 'maximum',
+      explain: 'No pension. Your spouse gets your contributions plus interest and one year of your salary, once.',
+      pensionMonthly: 0,
+      lumpSum: firstPre.lumpSum,
+      socialSecurityMonthly: widowSS,
+    });
+  }
+  const inService = inServiceDeathEligibility(inputs, pension);
+  if (inService && toIndex(inService.date) < toIndex(pension.retirementDate)) {
+    rows.push({
+      scenario: `You die while still working, after ${MONTH_NAMES[inService.date.month - 1]} ${inService.date.year} (stress credit counts)`,
+      option: 'option2',
+      explain: 'Your spouse can take a lifetime Option 2 pension as if you had retired that day, or the one-time payment instead.',
+      pensionMonthly: inService.survivorMonthly,
+      lumpSum: 0,
+      socialSecurityMonthly: widowSS,
+    });
   }
   const ages = [45, 65, 75].filter((a) => a >= Math.floor(pension.ageAtRetirement));
   const plopShare = pension.chosen.retireeMonthly > 0 ? pension.finalMonthly / pension.chosen.retireeMonthly : 1;
   for (const age of ages) {
     for (const o of pension.options) {
       rows.push({
-        scenario: `Dies at ${age}, after retiring`,
+        scenario: `You die at ${age}, after retiring`,
         option: o.option,
+        explain: OPTION_EXPLAIN[o.option],
         pensionMonthly: o.survivorMonthly * plopShare,
         lumpSum: o.option === 'option1' ? Math.max(0, pension.annuitySavings - o.retireeMonthly * 12 * (age - pension.ageAtRetirement)) : 0,
         socialSecurityMonthly: widowSS,
@@ -526,8 +671,8 @@ export function comparisons(inputs: ScenarioInputs, paths = 300): Comparison[] {
   out.push({
     title: 'All-stock vs. balanced 457(b)',
     variants: [
-      variantOf('All stocks', { ...inputs, accounts: withAlloc(inputs.accounts, '457b', { stocks: 1, bonds: 0, cash: 0 }) }, paths),
-      variantOf('Balanced 60/40', { ...inputs, accounts: withAlloc(inputs.accounts, '457b', { stocks: 0.6, bonds: 0.4, cash: 0 }) }, paths),
+      variantOf('All stocks', { ...inputs, accounts: withAlloc(withAlloc(inputs.accounts, '457b', { stocks: 1, bonds: 0, cash: 0 }), 'roth457', { stocks: 1, bonds: 0, cash: 0 }) }, paths),
+      variantOf('Balanced 60/40', { ...inputs, accounts: withAlloc(withAlloc(inputs.accounts, '457b', { stocks: 0.6, bonds: 0.4, cash: 0 }), 'roth457', { stocks: 0.6, bonds: 0.4, cash: 0 }) }, paths),
     ],
   });
   return out;

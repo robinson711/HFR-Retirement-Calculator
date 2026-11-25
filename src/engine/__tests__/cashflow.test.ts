@@ -1,4 +1,4 @@
-import { monteCarlo, project, sustainableSpending, type PlanInputs } from '../cashflow';
+import { completeOrder, monteCarlo, project, sustainableSpending, type PlanInputs } from '../cashflow';
 
 const plan: PlanInputs = {
   startYear: 2027, filing: 'mfj', memberBirthYear: 1985, spouseBirthYear: 1986, retirementYear: 2040, firstYearPensionMonths: 9,
@@ -52,5 +52,24 @@ describe('cash flow projection', () => {
     const mid = a.percentiles[20]!;
     expect(mid.p10).toBeLessThanOrEqual(mid.p50);
     expect(mid.p50).toBeLessThanOrEqual(mid.p90);
+  });
+});
+
+describe('Roth 457(b)', () => {
+  it('fills in a missing roth457 in old withdrawal orders, just before the Roth IRA', () => {
+    expect(completeOrder(['taxable', '457b', 'pretax', 'roth'])).toEqual(['taxable', '457b', 'pretax', 'roth457', 'roth']);
+  });
+  it('taxes traditional 457(b) withdrawals and not Roth 457(b) withdrawals', () => {
+    const only = (kind: '457b' | 'roth457'): PlanInputs => ({
+      ...plan,
+      accounts: [{ id: 'x', label: kind, kind, owner: 'member', balance: 2_000_000, contribution: 0, allocation: { stocks: 0, bonds: 0, cash: 1 } }],
+      withdrawalOrder: [kind],
+    });
+    const year = (p: PlanInputs) => project(p).rows.find((r) => r.year === 2042)!;
+    const trad = year(only('457b'));
+    const roth = year(only('roth457'));
+    expect(trad.withdrawals['457b']).toBeGreaterThan(0);
+    expect(roth.withdrawals.roth457).toBeGreaterThan(0);
+    expect(roth.taxes).toBeLessThan(trad.taxes);
   });
 });

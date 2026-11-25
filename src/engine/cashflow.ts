@@ -10,7 +10,8 @@
 import { normal, mulberry32 } from './random';
 import { computeTax, type FilingStatus } from './tax';
 
-export type AccountKind = '457b' | 'pretax' | 'taxable' | 'roth';
+/** 457b = traditional (pre-tax) 457(b); roth457 = Roth 457(b), taxed like a Roth. */
+export type AccountKind = '457b' | 'roth457' | 'pretax' | 'taxable' | 'roth';
 export type AssetClass = 'stocks' | 'bonds' | 'cash';
 export type Allocation = Record<AssetClass, number>;
 
@@ -108,8 +109,19 @@ export interface Projection {
   endingBalance: number;
 }
 
-const KINDS: AccountKind[] = ['taxable', '457b', 'pretax', 'roth'];
-const zeroByKind = (): Record<AccountKind, number> => ({ taxable: 0, '457b': 0, pretax: 0, roth: 0 });
+const KINDS: AccountKind[] = ['taxable', '457b', 'pretax', 'roth457', 'roth'];
+const zeroByKind = (): Record<AccountKind, number> => ({ taxable: 0, '457b': 0, roth457: 0, pretax: 0, roth: 0 });
+
+/** The withdrawal order with every account type in it. A missing roth457 goes just before roth. */
+export function completeOrder(order: AccountKind[]): AccountKind[] {
+  const out = [...order];
+  if (!out.includes('roth457')) {
+    const r = out.indexOf('roth');
+    out.splice(r === -1 ? out.length : r, 0, 'roth457');
+  }
+  for (const k of KINDS) if (!out.includes(k)) out.push(k);
+  return out;
+}
 
 /** Real return for one year from a nominal draw. */
 const toReal = (nominal: number, inflation: number) => (1 + nominal) / (1 + inflation) - 1;
@@ -123,6 +135,8 @@ export const expectedReturns = (a: Assumptions): ReturnDraw => () => ({
 });
 
 export function project(plan: PlanInputs, draw: ReturnDraw = expectedReturns(plan.assumptions), coreOverride?: number): Projection {
+  // Older saved scenarios may not list every account type; take any missing ones last, Roths before last.
+  const withdrawalOrder = completeOrder(plan.withdrawalOrder);
   const a = plan.assumptions;
   const accounts = plan.accounts.map((acc) => ({ ...acc, basis: (acc.basisPct ?? 1) * acc.balance }));
   const endYear = plan.memberBirthYear + a.longevityAge;
@@ -208,7 +222,7 @@ export function project(plan: PlanInputs, draw: ReturnDraw = expectedReturns(pla
         gains = 0;
         penaltyBase = 0;
         let remaining = Math.max(0, need + tax);
-        for (const kind of plan.withdrawalOrder) {
+        for (const kind of withdrawalOrder) {
           for (const acc of accounts.filter((x) => x.kind === kind)) {
             if (remaining <= 0) break;
             const w = Math.min(acc.balance, remaining);
@@ -241,7 +255,7 @@ export function project(plan: PlanInputs, draw: ReturnDraw = expectedReturns(pla
       // Apply the final withdrawals.
       const total = Math.max(0, need + tax);
       let remaining = total;
-      for (const kind of plan.withdrawalOrder) {
+      for (const kind of withdrawalOrder) {
         for (const acc of accounts.filter((x) => x.kind === kind)) {
           if (remaining <= 0) break;
           const w = Math.min(acc.balance, remaining);

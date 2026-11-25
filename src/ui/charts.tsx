@@ -16,8 +16,42 @@ import {
 import { k } from './format';
 
 // Palette chosen for contrast against both backgrounds and for color-vision deficiency (blue / orange / teal / purple).
-const LIGHT = { s1: '#2563eb', s2: '#c2410c', s3: '#0f766e', s4: '#7c3aed', s5: '#a16207', grid: '#d4d4d8', text: '#3f3f46', band: '#93c5fd' };
-const DARK = { s1: '#60a5fa', s2: '#fb923c', s3: '#2dd4bf', s4: '#a78bfa', s5: '#facc15', grid: '#3f3f46', text: '#d4d4d8', band: '#1e3a8a' };
+const LIGHT = { s1: '#2563eb', s2: '#c2410c', s3: '#0f766e', s4: '#7c3aed', s5: '#a16207', grid: '#d4d4d8', text: '#3f3f46', band: '#93c5fd', tipBg: '#ffffff', tipText: '#18181b', tipBorder: '#71717a' };
+const DARK = { s1: '#60a5fa', s2: '#fb923c', s3: '#2dd4bf', s4: '#a78bfa', s5: '#facc15', grid: '#3f3f46', text: '#d4d4d8', band: '#1e3a8a', tipBg: '#18181b', tipText: '#f4f4f5', tipBorder: '#a1a1aa' };
+type Palette = typeof LIGHT;
+
+interface TipItem {
+  name?: string | number;
+  value?: number | [number, number] | string;
+  color?: string;
+  fill?: string;
+  stroke?: string;
+}
+
+/**
+ * Hover box with dark-on-light (or light-on-dark) text for every row. Series colors appear only as a swatch,
+ * because colored text on the box failed contrast (yellow and orange on white especially).
+ */
+function tip(p: Palette, format: (v: number | [number, number]) => string, hideZero = false) {
+  return function Tip({ active, payload, label }: { active?: boolean; payload?: TipItem[]; label?: string | number }) {
+    if (!active || !payload?.length) return null;
+    const rows = payload.filter((it) => !(hideZero && typeof it.value === 'number' && Math.abs(it.value) < 0.5));
+    return (
+      <div style={{ background: p.tipBg, color: p.tipText, border: `1px solid ${p.tipBorder}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, lineHeight: 1.5, boxShadow: '0 2px 8px rgba(0,0,0,.25)' }}>
+        <div style={{ fontWeight: 700, marginBottom: 2 }}>Age {label}</div>
+        {rows.map((it) => (
+          <div key={String(it.name)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span aria-hidden style={{ width: 10, height: 10, borderRadius: 2, background: it.stroke && it.stroke !== 'none' ? it.stroke : (it.fill ?? it.color), flex: '0 0 auto' }} />
+            <span>{it.name}:</span>
+            <strong style={{ marginLeft: 'auto', paddingLeft: 8 }}>{typeof it.value === 'string' ? it.value : format(it.value as number | [number, number])}</strong>
+          </div>
+        ))}
+      </div>
+    );
+  };
+}
+const fmtK = (v: number | [number, number]) => (Array.isArray(v) ? `${k(v[0])} to ${k(v[1])}` : k(v));
+const fmtMonthly = (v: number | [number, number]) => (Array.isArray(v) ? '' : `$${Math.round(v).toLocaleString()}`);
 
 function usePalette() {
   const query = '(prefers-color-scheme: dark)';
@@ -67,7 +101,7 @@ export function IncomeChart({ data }: { data: IncomeRow[] }) {
         <CartesianGrid stroke={p.grid} vertical={false} />
         <XAxis dataKey="age" stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} label={{ value: 'Age', position: 'insideBottomRight', offset: -2, fill: p.text, fontSize: 12 }} />
         <YAxis tickFormatter={axisMoney} stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} width={56} />
-        <Tooltip formatter={(v: number) => k(v)} labelFormatter={(a) => `Age ${a}`} />
+        <Tooltip content={tip(p, fmtK, true)} />
         <Legend />
         <Area isAnimationActive={false} type="linear" dataKey="pension" name="RSA pension" stackId="1" stroke={p.s1} fill={p.s1} fillOpacity={0.7} />
         <Area isAnimationActive={false} type="linear" dataKey="socialSecurity" name="Social Security" stackId="1" stroke={p.s3} fill={p.s3} fillOpacity={0.7} />
@@ -88,10 +122,7 @@ export function BalanceChart({ data }: { data: Array<{ age: number; p10: number;
         <CartesianGrid stroke={p.grid} vertical={false} />
         <XAxis dataKey="age" stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} />
         <YAxis tickFormatter={axisMoney} stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} width={56} />
-        <Tooltip
-          formatter={(v: number | [number, number], name) => (Array.isArray(v) ? [`${k(v[0])} to ${k(v[1])}`, name] : [k(v), name])}
-          labelFormatter={(a) => `Age ${a}`}
-        />
+        <Tooltip content={tip(p, fmtK)} />
         <Legend />
         <Area isAnimationActive={false} type="linear" dataKey="band" name="10th to 90th percentile" stroke="none" fill={p.band} fillOpacity={0.6} />
         <Line isAnimationActive={false} type="linear" dataKey="p50" name="Median" stroke={p.s1} strokeWidth={2} dot={false} />
@@ -109,7 +140,7 @@ export function PurchasingPowerChart({ data }: { data: Array<{ age: number; nomi
         <CartesianGrid stroke={p.grid} vertical={false} />
         <XAxis dataKey="age" stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} />
         <YAxis tickFormatter={(v: number) => `$${Math.round(v / 100) / 10}k`} stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} width={56} />
-        <Tooltip formatter={(v: number) => `$${Math.round(v).toLocaleString()}`} labelFormatter={(a) => `Age ${a}`} />
+        <Tooltip content={tip(p, fmtMonthly)} />
         <Legend />
         <Line isAnimationActive={false} type="linear" dataKey="nominal" name="As paid" stroke={p.s1} strokeWidth={2} dot={false} />
         <Line isAnimationActive={false} type="linear" dataKey="real" name="In today's dollars" stroke={p.s2} strokeWidth={2} dot={false} />
@@ -127,7 +158,7 @@ export function PlopChart({ data }: { data: Array<{ age: number; difference: num
         <XAxis dataKey="age" stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} />
         <YAxis tickFormatter={axisMoney} stroke={p.text} tick={{ fill: p.text, fontSize: 12 }} width={56} />
         <ReferenceLine y={0} stroke={p.text} />
-        <Tooltip formatter={(v: number) => k(v)} labelFormatter={(a) => `Age ${a}`} />
+        <Tooltip content={tip(p, fmtK)} />
         <Line isAnimationActive={false} type="linear" dataKey="difference" name="PLOP ahead by" stroke={p.s3} strokeWidth={2} dot={false} />
       </LineChart>
     </Frame>

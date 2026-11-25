@@ -1,0 +1,70 @@
+{
+  "id": "social-security",
+  "version": "2026-11-25",
+  "rules": {
+    "taxableMax": {
+      "label": "Maximum taxable earnings (Social Security)",
+      "value": 184500,
+      "unit": "dollars per year, 2026",
+      "source": "ssa-cola-2026",
+      "citation": "2026 COLA fact sheet",
+      "status": "verified"
+    },
+    "bendPoints": {
+      "label": "PIA formula bend points",
+      "value": [1286, 7749],
+      "unit": "dollars of average indexed monthly earnings, 2026",
+      "source": "ssa-autoadj",
+      "citation": "Dollar amounts in PIA formula, 2026 row",
+      "status": "verified"
+    },
+    "pia.rates": {
+      "label": "PIA formula rates",
+      "value": [0.9, 0.32, 0.15],
+      "unit": "share of earnings below the first bend point, between the bend points, and above the second",
+      "source": "ssa-apnc-2025",
+      "citation": "Appendix C: Computing a Retired-Worker Benefit",
+      "status": "verified"
+    },
+    "computationYears": {
+      "label": "Years of earnings counted",
+      "value": 35,
+      "unit": "highest years; missing years count as zero",
+      "source": "ssa-apnc-2025",
+      "citation": "Appendix C: Computing a Retired-Worker Benefit",
+      "status": "verified"
+    },
+    "fullRetirementAge": {
+      "label": "Full retirement age, born 1960 or later",
+      "value": 67,
+      "unit": "years",
+      "source": "ssa-nra",
+      "citation": "Normal retirement age by year of birth",
+      "status": "verified"
+    },
+    "earlyReduction": {
+      "label": "Reduction for claiming early",
+      "value": [0.005555555555555556, 0.004166666666666667],
+      "unit": "per month early: 5/9 of 1% for the first 36 months, 5/12 of 1% after that",
+      "source": "ssa-early-late",
+      "citation": "Early or Late Retirement",
+      "status": "verified"
+    },
+    "delayedCredit": {
+      "label": "Delayed retirement credit",
+      "value": 0.08,
+      "unit": "per year after full retirement age, up to 70 (born 1943 or later)",
+      "source": "ssa-early-late",
+      "citation": "Early or Late Retirement",
+      "status": "verified"
+    },
+    "estimateMethod": {
+      "label": "Estimator method",
+      "value": "today's wages",
+      "unit": "earnings are entered in today's dollars and run through this year's formula, which approximates SSA's wage indexing",
+      "source": "ssa-apnc-2025",
+      "citation": "Rough estimate; use your SSA statement for the real figure",
+      "status": "estimate"
+    }
+  }
+}

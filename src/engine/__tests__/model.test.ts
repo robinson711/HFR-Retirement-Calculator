@@ -1,4 +1,4 @@
-import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension } from '../model';
+import { comparisons, computeScenario, deathByYear, defaultInputs, plopCumulative, survivorView, computePension, inServiceDeathEligibility } from '../model';
 
 describe('scenario model', () => {
   const inputs = defaultInputs();
@@ -35,5 +35,36 @@ describe('scenario model', () => {
     const p = computePension({ ...inputs, plop: { ...inputs.plop, months: 24 } });
     const curve = plopCumulative(p, 0.07, 0.025);
     expect(curve[0]!.difference).toBeCloseTo(p.plop.lumpSum, 6);
+  });
+});
+
+describe('in-service death eligibility (ERS Handbook p.16)', () => {
+  it('counts stress credit, so 20y10m actual plus 4y2m stress reaches 25 years', () => {
+    const inputs = defaultInputs({ year: 2026, month: 11 });
+    inputs.member = { tier: 'tier2-converted', birth: { year: 1993, month: 8 }, hire: { year: 2014, month: 5 }, stressCredit: true };
+    const pension = computePension(inputs);
+    const e = inServiceDeathEligibility(inputs, pension)!;
+    expect(e.date).toEqual({ year: 2035, month: 3 });
+    expect(e.actualMonths).toBe(250);
+    expect(e.stressMonths).toBe(50);
+    expect(e.viaStressCredit).toBe(true);
+    expect(e.survivorMonthly).toBeGreaterThan(0);
+  });
+  it('waits for 25 actual years without stress credit', () => {
+    const inputs = defaultInputs({ year: 2026, month: 11 });
+    inputs.member = { tier: 'tier2-converted', birth: { year: 1993, month: 8 }, hire: { year: 2014, month: 5 }, stressCredit: false };
+    inputs.retirement = { targetServiceYears: 30, dateOverride: null };
+    const e = inServiceDeathEligibility(inputs, computePension(inputs))!;
+    expect(e.date).toEqual({ year: 2039, month: 5 });
+    expect(e.viaStressCredit).toBe(false);
+  });
+});
+
+describe('comparisons', () => {
+  it('gives each option its own sustainable spending', () => {
+    for (const c of comparisons(defaultInputs({ year: 2026, month: 11 }), 20)) {
+      const values = c.variants.map((v) => Math.round(v.sustainable));
+      expect(new Set(values).size).toBe(values.length);
+    }
   });
 });
