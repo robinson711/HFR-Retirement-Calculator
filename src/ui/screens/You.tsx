@@ -41,7 +41,7 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
           label="Stress bill credit applies"
           checked={inputs.member.stressCredit && !tier2}
           onChange={(stressCredit) => set((s) => ({ ...s, member: { ...s.member, stressCredit } }))}
-          hint="One extra year per five years of firefighter service. It raises the benefit but does not count toward retirement eligibility. Not available to Tier II."
+          hint="One extra year per five years of firefighter service. It raises the benefit but does not count toward retirement eligibility."
         />
         <SelectField
           id="work-schedule"

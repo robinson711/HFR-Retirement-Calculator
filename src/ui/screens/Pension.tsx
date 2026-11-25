@@ -30,6 +30,7 @@ export function Pension({ inputs, result, set, onEditSchedule }: { inputs: Scena
   });
   const at85 = power.find((r) => r.age === 85);
   const letter = inputs.survivor.letter;
+  const letterCount = (['maximum', 'option1', 'option2', 'option3', 'option4'] as const).filter((key) => (letter[key] ?? 0) > 0).length;
   const setLetter = (key: keyof typeof letter, v: number) => set((s) => ({ ...s, survivor: { ...s.survivor, letter: { ...s.survivor.letter, [key]: v > 0 ? v : null } } }));
 
   return (
@@ -92,9 +93,20 @@ export function Pension({ inputs, result, set, onEditSchedule }: { inputs: Scena
           head={['Option', 'You receive', 'Survivor receives', 'Basis']}
           rows={p.options.map((o) => [OPTION_LABELS[o.option], monthly(o.retireeMonthly), o.survivorMonthly > 0 ? monthly(o.survivorMonthly) : 'None', o.option === 'maximum' ? 'RSA formula' : o.basis === 'letter' ? 'Your letter' : 'Estimate'])}
         />
-        <details>
-          <summary>Enter figures from your RSA estimate letter</summary>
-          <p className="hint">Use the same letter for all of these. The app applies each option's share of the letter's Maximum to your projected Maximum.</p>
+        <details className="letter-panel">
+          <summary>
+            <svg className="letter-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+              <path d="M6 2h9l5 5v15H6z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+              <path d="M15 2v5h5M9 12h8M9 16h8M9 8h3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            <span className="letter-title">Enter figures from your RSA estimate letter</span>
+            <span className={`letter-status${letterCount > 0 ? ' on' : ''}`}>{letterCount > 0 ? `Using your letter (${letterCount} of 5)` : 'Not entered: using estimates'}</span>
+          </summary>
+          <p>
+            These are <strong>exact figures from RSA</strong>, not estimates. Copy them from your Benefit Estimate letter. Use the same letter for all of them. The
+            app applies each option&apos;s share of the letter&apos;s Maximum to your projected Maximum, and marks those rows &quot;Your letter&quot; in the table
+            above.
+          </p>
           <div className="row wrap">
             <MoneyField label="Letter: Maximum" value={letter.maximum ?? 0} step={0.01} onChange={(v) => setLetter('maximum', v)} />
             <MoneyField label="Letter: Option 1" value={letter.option1 ?? 0} step={0.01} onChange={(v) => setLetter('option1', v)} />
