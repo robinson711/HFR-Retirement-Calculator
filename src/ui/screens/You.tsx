@@ -1,6 +1,7 @@
 import { SCHEDULE, type ScenarioInputs } from '../../engine/model';
 import { basePay, gradeOrder, PROMOTION_RAISE_PER_GRADE, salaryPath, type Promotion } from '../../engine/salary';
 import { fiscalYearOf } from '../../engine/service';
+import { WORK_SCHEDULES, type WorkSchedule } from '../../engine/sickLeave';
 import { MonthYearField, MoneyField, Note, NumberField, PercentField, Section, SelectField, Toggle } from '../components';
 import { dollars, pct } from '../format';
 
@@ -41,6 +42,18 @@ export function You({ inputs, set }: { inputs: ScenarioInputs; set: Setter }) {
           checked={inputs.member.stressCredit && !tier2}
           onChange={(stressCredit) => set((s) => ({ ...s, member: { ...s.member, stressCredit } }))}
           hint="One extra year per five years of firefighter service. It raises the benefit but does not count toward retirement eligibility. Not available to Tier II."
+        />
+        <SelectField
+          id="work-schedule"
+          label="Work schedule"
+          value={inputs.sickLeave.workSchedule}
+          options={Object.entries(WORK_SCHEDULES).map(([k, v]) => [k as WorkSchedule, v.label])}
+          onChange={(workSchedule) => set((s) => ({ ...s, sickLeave: { ...s.sickLeave, workSchedule } }))}
+          hint={
+            inputs.sickLeave.workSchedule === 'fireSuppression'
+              ? 'Set it once here; the whole app uses it. Fire suppression: hourly rate = base pay ÷ 2,912 hours; sick leave accrues 145.6 hours a year and 11.2 hours count as a day (10.7(D)); leave payout caps are 364 annual, 336 holiday and 336 comp hours.'
+              : 'Set it once here; the whole app uses it. 40-hour: hourly rate = base pay ÷ 2,080 hours; sick leave accrues 104 hours a year and 8 hours make a day (10.7(D)); leave payout caps are 260 annual, 240 holiday and 240 comp hours.'
+          }
         />
         <SelectField
           label="Tax filing status"

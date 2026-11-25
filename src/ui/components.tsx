@@ -76,11 +76,14 @@ export function Note({ children, kind = 'info' }: { children: ReactNode; kind?: 
 interface FieldProps {
   label: string;
   hint?: ReactNode;
+  /** A fixed id, so another screen can move focus to this field. */
+  id?: string;
   children: (id: string, describedBy?: string) => ReactNode;
 }
 
-export function Field({ label, hint, children }: FieldProps) {
-  const id = useId();
+export function Field({ label, hint, id: fixedId, children }: FieldProps) {
+  const autoId = useId();
+  const id = fixedId ?? autoId;
   const hintId = hint ? `${id}-hint` : undefined;
   return (
     <div className="field">
@@ -204,15 +207,17 @@ export function SelectField<T extends string>({
   options,
   onChange,
   hint,
+  id,
 }: {
   label: string;
   value: T;
   options: Array<[T, string]>;
   onChange: (v: T) => void;
   hint?: ReactNode;
+  id?: string;
 }) {
   return (
-    <Field label={label} hint={hint}>
+    <Field label={label} hint={hint} id={id}>
       {(id, describedBy) => (
         <select id={id} value={value} aria-describedby={describedBy} onChange={(e) => onChange(e.target.value as T)}>
           {options.map(([v, l]) => (
@@ -277,5 +282,21 @@ export function Table({ caption, head, rows }: { caption: string; head: string[]
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Read-only reminder of a setting made once elsewhere, with a button that takes you to it. */
+export function SettingLine({ label, value, onEdit, where }: { label: string; value: string; onEdit?: () => void; where: string }) {
+  return (
+    <p className="setting-line">
+      {label}: <strong>{value}</strong>.{' '}
+      {onEdit ? (
+        <button type="button" className="link-button" onClick={onEdit}>
+          Change it on {where}
+        </button>
+      ) : (
+        <>Change it on {where}.</>
+      )}
+    </p>
   );
 }
