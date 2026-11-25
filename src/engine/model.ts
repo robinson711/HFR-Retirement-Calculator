@@ -354,6 +354,45 @@ export interface DeathRow {
   gap: number;
 }
 
+export interface InServiceDeathEligibility {
+  /** First month a death in service would let the spouse take a lifetime Option 2 benefit. */
+  date: YearMonth;
+  actualMonths: number;
+  stressMonths: number;
+  /** Rough Option 2 monthly benefit to the spouse for a death in that month, today's dollars. */
+  survivorMonthly: number;
+  /** True when stress credit is what makes the member eligible before actual service alone would. */
+  viaStressCredit: boolean;
+}
+
+/**
+ * ERS Handbook p.16: hazardous duty (stress) credit counts toward retirement eligibility for an in-service death of
+ * a firefighter. With Tier 1 rules, about 20 years 10 months of actual service plus 4 years 2 months of stress credit
+ * reaches 25 years, so the spouse could take a lifetime Option 2 benefit from then on.
+ */
+export function inServiceDeathEligibility(inputs: ScenarioInputs, pension: PensionResult): InServiceDeathEligibility | null {
+  const member = { ...inputs.member, sickLeaveMonths: 0 };
+  const start = toIndex(inputs.today);
+  const end = toIndex(pension.retirementDate);
+  for (let i = start; i <= end; i++) {
+    const date = fromIndex(i);
+    const s = serviceAt(member, date);
+    if (!eligibility(inputs.member.tier, { ...s, eligibilityMonths: s.eligibilityMonths + s.stressMonths }).eligible) continue;
+    const rules = tierRules(inputs.member.tier);
+    const spouseAge = ageYears(inputs.survivor.beneficiaryBirth, pension.retirementDate);
+    const option2 = estimatedFactors(pension.ageAtRetirement, spouseAge, pension.maximum.monthly, pension.annuitySavings).option2;
+    const maxAtDate = (pension.maximum.afs * (s.creditedMonths / 12) * rules.benefitFactor) / 12;
+    return {
+      date,
+      actualMonths: s.actualMonths,
+      stressMonths: s.stressMonths,
+      survivorMonthly: maxAtDate * option2,
+      viaStressCredit: !eligibility(inputs.member.tier, s).eligible,
+    };
+  }
+  return null;
+}
+
 export function deathByYear(inputs: ScenarioInputs, pension: PensionResult): DeathRow[] {
   const rows: DeathRow[] = [];
   const rules = tierRules(inputs.member.tier);
